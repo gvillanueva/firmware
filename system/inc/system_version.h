@@ -38,6 +38,10 @@ extern "C" {
 
 #define SYSTEM_VERSION  SYSTEM_VERSION_v024
 
+/**
+ * For Library/App creators. Can be used to ensure features/api's are present.
+ * Add a new define for every XYZRCN or final XYZ release.
+ */
 #define SYSTEM_VERSION_011
 #define SYSTEM_VERSION_020
 #define SYSTEM_VERSION_021
