@@ -38,7 +38,6 @@
 #include "delay_hal.h"
 #include "dct_hal.h"
 #include "concurrent_hal.h"
-#include "wwd_resources.h"
 
 LOG_SOURCE_CATEGORY("hal.wlan");
 
