@@ -239,7 +239,7 @@ void ble_provision_finalize() {
 
     wiced_rtos_delay_milliseconds( 500 );
 
-    USB_Cable_Config(DISABLE);
+    HAL_USB_Detach();
     HAL_Core_System_Reset();
 }
 
