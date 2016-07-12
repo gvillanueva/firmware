@@ -897,7 +897,7 @@ bool fetch_or_generate_device_code(wiced_ssid_t* SSID) {
     uint8_t* dest = SSID->value+SSID->length;
     SSID->length += DEVICE_CODE_LEN;
     if (generate) {
-        random_code(dest, DEVICE_ID_LEN);
+        random_code(dest, DEVICE_CODE_LEN);
         dct_write_app_data(dest, DCT_DEVICE_CODE_OFFSET, DEVICE_CODE_LEN);
     }
     else {
