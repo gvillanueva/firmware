@@ -2,8 +2,6 @@
 #ifndef CONCURRENT_HAL_IMPL_H
 #define	CONCURRENT_HAL_IMPL_H
 
-#define OS_TIMER_INVALID_HANDLE NULL
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -50,6 +48,8 @@ int __gthread_cond_timedwait (__gthread_cond_t *cond,
 
 
 int __gthread_mutex_timedlock (__gthread_mutex_t* mutex, const __gthread_time_t* timeout);
+
+int __gthread_recursive_mutex_timedlock (__gthread_recursive_mutex_t* mutex, const __gthread_time_t* timeout);
 
 #ifdef	__cplusplus
 }
