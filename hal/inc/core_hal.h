@@ -111,6 +111,7 @@ typedef enum System_Reset_Reason
 /* Exported functions --------------------------------------------------------*/
 #include "watchdog_hal.h"
 #include "core_subsys_hal.h"
+#include "interrupts_hal.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -120,7 +121,7 @@ void HAL_Core_Init(void);
 void HAL_Core_Config(void);
 bool HAL_Core_Validate_User_Module(void);
 bool HAL_Core_Mode_Button_Pressed(uint16_t pressedMillisDuration);
-void HAL_Core_Mode_Button_Reset(void);
+void HAL_Core_Mode_Button_Reset(uint16_t button);
 void HAL_Core_System_Reset(void);
 void HAL_Core_Factory_Reset(void);
 
@@ -237,6 +238,31 @@ extern void module_user_init_hook(void);
 
 int HAL_System_Backup_Save(size_t offset, const void* buffer, size_t length, void* reserved);
 int HAL_System_Backup_Restore(size_t offset, void* buffer, size_t max_length, size_t* length, void* reserved);
+
+void HAL_Core_Button_Mirror_Pin(uint16_t pin, InterruptMode mode, uint8_t bootloader, uint8_t button, void* reserved);
+void HAL_Core_Button_Mirror_Pin_Disable(uint8_t bootloader, uint8_t button, void* reserved);
+
+void HAL_Core_Led_Mirror_Pin(uint8_t led, pin_t pin, uint32_t flags, uint8_t bootloader, void* reserved);
+void HAL_Core_Led_Mirror_Pin_Disable(uint8_t led, uint8_t bootloader, void* reserved);
+
+/**
+ * HAL event type.
+ */
+typedef enum {
+    HAL_EVENT_GENERATE_DEVICE_KEY = 10 // Fired when HAL attempts to generate device keys
+} HAL_Event;
+
+/**
+ * HAL event flags.
+ */
+typedef enum {
+    HAL_EVENT_FLAG_START = 0x01, // Event started
+    HAL_EVENT_FLAG_STOP = 0x02 // Event stopped
+} HAL_Event_Flag;
+
+typedef void(*HAL_Event_Callback)(int event, int flags, void* data);
+
+void HAL_Set_Event_Callback(HAL_Event_Callback callback, void* reserved);
 
 #ifdef __cplusplus
 }

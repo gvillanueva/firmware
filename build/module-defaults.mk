@@ -18,6 +18,11 @@ endif
 ifeq ("$(DEBUG_BUILD)","y")
 CFLAGS += -DDEBUG_BUILD
 COMPILE_LTO ?= n
+#
+ifeq ("$(DEBUG_THREADING)","y")
+CFLAGS += -DDEBUG_THREADING
+endif
+#
 else
 CFLAGS += -DRELEASE_BUILD
 endif
@@ -92,7 +97,6 @@ LDFLAGS += -Wl,--whole-archive $(patsubst %,-l%,$(LIBS)) -Wl,--no-whole-archive
 else
 LDFLAGS += $(patsubst %,-l%,$(LIBS))
 endif
-
 
 # Assembler flags
 ASFLAGS += -x assembler-with-cpp -fmessage-length=0

@@ -16,10 +16,13 @@
  ******************************************************************************
  */
 
+#include "logging.h"
+
 #include "spark_wiring_string.h"
 #include "spark_wiring_cloud.h"
 #include "spark_wiring_ticks.h"
 #include "spark_wiring_ipaddress.h"
+#include "spark_wiring_led.h"
 #include "system_cloud_internal.h"
 #include "system_mode.h"
 #include "system_network.h"
@@ -43,6 +46,7 @@
 #include "system_string_interpolate.h"
 #include "dtls_session_persist.h"
 #include "bytes2hexbuf.h"
+#include "system_event.h"
 
 #include <stdio.h>
 #include <stdint.h>
@@ -51,23 +55,16 @@
 
 #ifndef SPARK_NO_CLOUD
 
+using particle::LEDStatus;
+
 int userVarType(const char *varKey);
 const void *getUserVar(const char *varKey);
 int userFuncSchedule(const char *funcKey, const char *paramString, SparkDescriptor::FunctionResultCallback callback, void* reserved);
 
+static int finish_ota_firmware_update(FileTransfer::Descriptor& file, uint32_t flags, void* module);
 static void formatResetReasonEventData(int reason, uint32_t data, char *buf, size_t size);
 
 static sock_handle_t sparkSocket = socket_handle_invalid();
-
-extern uint8_t LED_RGB_BRIGHTNESS;
-
-// LED_Signaling_Override
-volatile uint8_t LED_Spark_Signal;
-const uint32_t VIBGYOR_Colors[] = {
-    0xEE82EE, 0x4B0082, 0x0000FF, 0x00FF00, 0xFFFF00, 0xFFA500, 0xFF0000
-};
-const int VIBGYOR_Size = sizeof (VIBGYOR_Colors) / sizeof (uint32_t);
-int VIBGYOR_Index;
 
 ProtocolFacade* sp;
 
@@ -605,7 +602,8 @@ void Spark_Protocol_Init(void)
         		callbacks.transport_context = nullptr;
         }
 		callbacks.prepare_for_firmware_update = Spark_Prepare_For_Firmware_Update;
-        callbacks.finish_firmware_update = Spark_Finish_Firmware_Update;
+        //callbacks.finish_firmware_update = Spark_Finish_Firmware_Update;
+        callbacks.finish_firmware_update = finish_ota_firmware_update;
         callbacks.calculate_crc = HAL_Core_Compute_CRC32;
         callbacks.save_firmware_chunk = Spark_Save_Firmware_Chunk;
         callbacks.signal = Spark_Signal;
@@ -659,46 +657,54 @@ void Spark_Protocol_Init(void)
     }
 }
 
-void system_set_time(time_t time, unsigned, void*)
+void system_set_time(time_t time, unsigned param, void*)
 {
     HAL_RTC_Set_UnixTime(time);
+    system_notify_event(time_changed, time_changed_sync);
 }
 
 const int CLAIM_CODE_SIZE = 63;
 
 int Spark_Handshake(bool presence_announce)
 {
-	DEBUG("starting handshake announce=%d", presence_announce);
+	LOG(INFO,"Starting handshake: presense_announce=%d", presence_announce);
     int err = spark_protocol_handshake(sp);
     if (!err)
     {
         char buf[CLAIM_CODE_SIZE + 1];
         if (!HAL_Get_Claim_Code(buf, sizeof (buf)) && *buf)
         {
+            LOG(INFO,"Send spark/device/claim/code event");
             Particle.publish("spark/device/claim/code", buf, 60, PRIVATE);
         }
 
         // open up for possibility of retrieving multiple ID datums
         if (!HAL_Get_Device_Identifier(NULL, buf, sizeof(buf), 0, NULL) && *buf) {
+            LOG(INFO,"Send spark/device/ident/0 event");
             Particle.publish("spark/device/ident/0", buf, 60, PRIVATE);
         }
 
         bool udp = HAL_Feature_Get(FEATURE_CLOUD_UDP);
 #if PLATFORM_ID!=PLATFORM_ELECTRON || !defined(MODULAR_FIRMWARE)
         ultoa(HAL_OTA_FlashLength(), buf, 10);
+        LOG(INFO,"Send spark/hardware/max_binary event");
         Particle.publish("spark/hardware/max_binary", buf, 60, PRIVATE);
 #endif
 
         uint32_t chunkSize = HAL_OTA_ChunkSize();
         if (chunkSize!=512 || !udp) {
-        		ultoa(chunkSize, buf, 10);
-        		Particle.publish("spark/hardware/ota_chunk_size", buf, 60, PRIVATE);
+            ultoa(chunkSize, buf, 10);
+            LOG(INFO,"spark/hardware/ota_chunk_size event");
+            Particle.publish("spark/hardware/ota_chunk_size", buf, 60, PRIVATE);
         }
-        if (system_mode()==SAFE_MODE)
+        if (system_mode()==SAFE_MODE) {
+            LOG(INFO,"Send spark/device/safemode event");
             Particle.publish("spark/device/safemode","", 60, PRIVATE);
+        }
 #if defined(SPARK_SUBSYSTEM_EVENT_NAME)
         if (!HAL_core_subsystem_version(buf, sizeof (buf)) && *buf)
         {
+            LOG(INFO,"Send spark/" SPARK_SUBSYSTEM_EVENT_NAME " event");
             Particle.publish("spark/" SPARK_SUBSYSTEM_EVENT_NAME, buf, 60, PRIVATE);
         }
 #endif
@@ -712,12 +718,15 @@ int Spark_Handshake(bool presence_announce)
             {
                 char buf[64];
                 formatResetReasonEventData(reason, data, buf, sizeof(buf));
+                LOG(INFO,"Send spark/device/last_reset event");
                 Particle.publish("spark/device/last_reset", buf, 60, PRIVATE);
             }
         }
 
-        if (presence_announce)
-        		Multicast_Presence_Announcement();
+        if (presence_announce) {
+            Multicast_Presence_Announcement();
+        }
+        LOG(INFO,"Send subscriptions");
         spark_protocol_send_subscriptions(sp);
         // important this comes at the end since it requires a response from the cloud.
         spark_protocol_send_time_request(sp);
@@ -725,8 +734,12 @@ int Spark_Handshake(bool presence_announce)
     }
     if (err==particle::protocol::SESSION_RESUMED)
     {
-    		DEBUG("cloud connected from existing session.");
-    		err = 0;
+        LOG(INFO,"cloud connected from existing session.");
+        err = 0;
+        if (!HAL_RTC_Time_Is_Valid(nullptr) && spark_sync_time_last(nullptr, nullptr) == 0) {
+            spark_protocol_send_time_request(sp);
+            Spark_Process_Events();
+        }
     }
     return err;
 }
@@ -739,43 +752,53 @@ inline bool Spark_Communication_Loop(void)
     return spark_protocol_event_loop(sp);
 }
 
-/* This function MUST NOT BlOCK!
- * It will be executed every 1ms if LED_Signaling_Start() is called
- * and stopped as soon as LED_Signaling_Stop() is called */
-void LED_Signaling_Override(void)
-{
-    static uint8_t LED_Signaling_Timing = 0;
-    if (0 < LED_Signaling_Timing)
-    {
-        --LED_Signaling_Timing;
+namespace {
+
+// LED status for the test signal that can be triggered from the cloud
+class LEDCloudSignalStatus: public LEDStatus {
+public:
+    explicit LEDCloudSignalStatus(LEDPriority priority) :
+            LEDStatus(LED_PATTERN_CUSTOM, priority),
+            ticks_(0),
+            index_(0) {
+        updateColor();
     }
-    else
-    {
-        LED_SetSignalingColor(VIBGYOR_Colors[VIBGYOR_Index]);
-        LED_On(LED_RGB);
 
-        LED_Signaling_Timing = 100; // 100 ms
-
-        ++VIBGYOR_Index;
-        if (VIBGYOR_Index >= VIBGYOR_Size)
-        {
-            VIBGYOR_Index = 0;
+protected:
+    virtual void update(system_tick_t t) override {
+        if (t >= ticks_) {
+            // Change LED color
+            if (++index_ == COLOR_COUNT) {
+                index_ = 0;
+            }
+            updateColor();
+        } else {
+            ticks_ -= t; // Update timing
         }
     }
-}
+
+private:
+    uint16_t ticks_;
+    uint8_t index_;
+
+    void updateColor() {
+        setColor(COLORS[index_]);
+        ticks_ = 100;
+    }
+
+    static const uint32_t COLORS[];
+    static const size_t COLOR_COUNT;
+};
+
+const uint32_t LEDCloudSignalStatus::COLORS[] = { 0xEE82EE, 0x4B0082, 0x0000FF, 0x00FF00, 0xFFFF00, 0xFFA500, 0xFF0000 }; // VIBGYOR
+const size_t LEDCloudSignalStatus::COLOR_COUNT = sizeof(LEDCloudSignalStatus::COLORS) / sizeof(LEDCloudSignalStatus::COLORS[0]);
+
+} // namespace
 
 void Spark_Signal(bool on, unsigned, void*)
 {
-    if (on)
-    {
-        LED_Signaling_Start();
-        LED_Spark_Signal = 1;
-    }
-    else
-    {
-        LED_Signaling_Stop();
-        LED_Spark_Signal = 0;
-    }
+    static LEDCloudSignalStatus ledCloudSignal(LED_PRIORITY_IMPORTANT);
+    ledCloudSignal.setActive(on);
 }
 
 size_t system_interpolate(const char* var, size_t var_len, char* buf, size_t buf_len)
@@ -1120,6 +1143,45 @@ inline uint8_t spark_cloud_socket_closed()
         closed = true;
     }
     return closed;
+}
+
+int formatOtaUpdateStatusEventData(uint32_t flags, int result, hal_module_t* module, uint8_t *buf, size_t size)
+{
+    int res = 1;
+    memset(buf, 0, size);
+
+    BufferAppender appender(buf, size);
+    appender.append("{");
+    appender.append("\"r\":");
+    appender.append(result ? "\"error\"" : "\"ok\"");
+
+    if (flags & 1) {
+        appender.append(",");
+        res = ota_update_info(append_instance, &appender, module, false, NULL);
+    }
+
+    appender.append("}");
+
+    return res;
+}
+
+int finish_ota_firmware_update(FileTransfer::Descriptor& file, uint32_t flags, void*)
+{
+    hal_module_t module;
+    uint8_t buf[512];
+
+    int result = Spark_Finish_Firmware_Update(file, flags, &module);
+
+    formatOtaUpdateStatusEventData(flags, result, &module, buf, sizeof(buf));
+
+    LOG(INFO, "Send spark/device/ota_result event");
+    LOG_PRINT(TRACE, (const char*)buf);
+    LOG_PRINTF(TRACE, "\r\n");
+    Particle.publish("spark/device/ota_result", (const char*)buf, 60, PRIVATE);
+    HAL_Delay_Milliseconds(1000);
+    Spark_Process_Events();
+
+    return result;
 }
 
 static const char* resetReasonString(System_Reset_Reason reason)

@@ -371,7 +371,7 @@ External Particle libraries can be compiled and linked with firmware. To add one
 ```
 cd /particle/libs/neopixel
 rm -rf firmware/examples
-``
+```
 
 3. Rename `firmware` to be the same as the library name. 
 ```
@@ -469,6 +469,15 @@ USE_SWD=y
 
 and perform a clean build. For more details on SWD-only debugging
 see https://github.com/spark/firmware/pull/337
+
+
+## Compilation without Arduino Compatibility Support
+
+Arduino compatibility defines are included by default to support hundreds of libraries that have been ported from Arduino to Particle.  If those defines should cause an issue with your build, you may remove them by adding
+
+PARTICLE_NO_ARDUINO_COMPATIBILITY=y to the make command line. This requires a clean build.
+
+There should be no difference in FLASH or RAM allocation with or without these defines.
 
 
 ## Compilation without Cloud Support
