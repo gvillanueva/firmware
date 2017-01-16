@@ -62,6 +62,11 @@
 #include "spark_wiring_watchdog.h"
 #include "spark_wiring_thread.h"
 #include "spark_wiring_logging.h"
+#include "spark_wiring_json.h"
+#include "spark_wiring_vector.h"
+#include "spark_wiring_async.h"
+#include "spark_wiring_error.h"
+#include "spark_wiring_led.h"
 #include "fast_pin.h"
 #include "string_convert.h"
 #include "debug_output_handler.h"
@@ -81,5 +86,15 @@
 #include "stdio.h"
 
 using namespace spark;
+using namespace particle;
+
+#ifndef PARTICLE_NO_ARDUINO_COMPATIBILITY
+#define PARTICLE_NO_ARDUINO_COMPATIBILITY 0
+#endif
+#if !PARTICLE_NO_ARDUINO_COMPATIBILITY
+#undef PARTICLE_ARDUINO_COMPATIBILITY
+#define PARTICLE_ARDUINO_COMPATIBILITY 1
+#endif
+#include "spark_wiring_arduino.h"
 
 #endif /* APPLICATION_H_ */
