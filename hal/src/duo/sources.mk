@@ -74,6 +74,9 @@ CFLAGS += -DSFLASH_APPS_HEADER_LOC=0x0000 -DUSE_STDPERIPH_DRIVER -D_STM32F215RGT
 
 CFLAGS := $(filter-out -Werror,$(CFLAGS))
 
+# Disable GNU extensions for libc to avoid conflicts with WICED
+NO_GNU_EXTENSIONS=1
+
 # ASM source files included in this build.
 ASRC +=
 

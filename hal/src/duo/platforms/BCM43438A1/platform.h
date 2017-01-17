@@ -30,30 +30,30 @@ Notes
 
 typedef enum
 {
-   D0,
-   D1,
-   D2,
-   D3,
-   D4,
-   D5,
-   D6,
-   D7,
-   D8,
-   D9,
-   D10,
-   D11,
-   D12,
-   D13,
-   D14,
-   D15,
-   D16,
-   D17,
-
-   // LED & Button
-   D18,
-   D19,
-   D20,
-   D21,
+//   D0,
+//   D1,
+//   D2,
+//   D3,
+//   D4,
+//   D5,
+//   D6,
+//   D7,
+//   D8,
+//   D9,
+//   D10,
+//   D11,
+//   D12,
+//   D13,
+//   D14,
+//   D15,
+//   D16,
+//   D17,
+//
+//   // LED & Button
+//   D18,
+//   D19,
+//   D20,
+//   D21,
 
    // SPI Flash
    FLASH_SPI_CS,
@@ -67,14 +67,14 @@ typedef enum
 
 typedef enum
 {
-    A0,
-    A1,
-    A2,
-    A3,
-    A4,
-    A5,
-    A6,
-    A7,
+//    A0,
+//    A1,
+//    A2,
+//    A3,
+//    A4,
+//    A5,
+//    A6,
+//    A7,
 
     WICED_ADC_MAX, /* Denotes the total number of ADC port aliases. Not a valid ADC alias */
     WICED_ADC_32BIT = 0x7FFFFFFF,

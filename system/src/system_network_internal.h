@@ -126,7 +126,6 @@ class ManagedNetworkInterface : public NetworkInterface
     volatile uint8_t WLAN_DELETE_PROFILES;
     volatile uint8_t WLAN_SMART_CONFIG_START; // Set to 'true' when listening mode is pending
     volatile uint8_t WLAN_SMART_CONFIG_ACTIVE;
-    volatile uint8_t WLAN_SMART_CONFIG_STOP;
     volatile uint8_t WLAN_SMART_CONFIG_FINISHED;
     volatile uint8_t WLAN_CONNECTED;
     volatile uint8_t WLAN_CONNECTING;
@@ -148,6 +147,7 @@ class ManagedNetworkInterface : public NetworkInterface
 protected:
 
     volatile uint8_t WLAN_SERIAL_CONFIG_DONE;
+    volatile uint8_t WLAN_SMART_CONFIG_STOP;
     virtual network_interface_t network_interface() override { return 0; }
     virtual void start_listening()=0;
 

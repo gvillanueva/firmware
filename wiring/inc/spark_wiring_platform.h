@@ -104,6 +104,7 @@
 #define Wiring_USBSerial1 1
 #define Wiring_Mouse 1
 #define Wiring_Keyboard 1
+#define Wiring_LogConfig 1
 #endif
 
 #ifndef Wiring_SPI1

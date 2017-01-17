@@ -31,7 +31,7 @@
 #include "rgbled.h"
 #include "button.h"
 
-#if (PLATFORM_ID == 6) || (PLATFORM_ID == 10) || (PLATFORM_ID == 8)
+#if (PLATFORM_ID == 6) || (PLATFORM_ID == 10) || (PLATFORM_ID == 8) || (PLATFORM_ID == 88)
 #include "led_signal.h"
 #define USE_LED_THEME
 #endif

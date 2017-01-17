@@ -51,26 +51,34 @@
 //LEDs
 #if PLATFORM_DUO_PRODUCTION == PLATFORM_ID
 #define LEDn                                4
+#define LED_MIRROR_SUPPORTED                1
 #define LED1_GPIO_AF_TIM                    0                       //User Led
 #define LED1_GPIO_PIN                       GPIO_Pin_13             //User Led
 #define LED1_GPIO_PIN_SOURCE                GPIO_PinSource13        //User Led
 #define LED1_GPIO_PORT                      GPIOA                   //User Led
 #define LED1_GPIO_CLK                       RCC_AHB1Periph_GPIOA    //User Led
+#define LED1_GPIO_MODE                      GPIO_Mode_OUT           //User Led
+#define LED_BLUE                            LED2
 #define LED2_GPIO_AF_TIM                    GPIO_AF_TIM3            //BLUE Led
 #define LED2_GPIO_PIN                       GPIO_Pin_0              //BLUE Led
 #define LED2_GPIO_PIN_SOURCE                GPIO_PinSource0         //BLUE Led
 #define LED2_GPIO_PORT                      GPIOB                   //BLUE Led
 #define LED2_GPIO_CLK                       RCC_AHB1Periph_GPIOB    //BLUE Led
+#define LED2_GPIO_MODE                      GPIO_Mode_AF            //BLUE Led
+#define LED_RED                             LED3
 #define LED3_GPIO_AF_TIM                    GPIO_AF_TIM2            //RED Led
 #define LED3_GPIO_PIN                       GPIO_Pin_11             //RED Led
 #define LED3_GPIO_PIN_SOURCE                GPIO_PinSource11        //RED Led
 #define LED3_GPIO_PORT                      GPIOB                   //RED Led
 #define LED3_GPIO_CLK                       RCC_AHB1Periph_GPIOB    //RED Led
+#define LED3_GPIO_MODE                      GPIO_Mode_AF            //RED Led
+#define LED_GREEN                           LED4
 #define LED4_GPIO_AF_TIM                    GPIO_AF_TIM3            //GREEN Led
 #define LED4_GPIO_PIN                       GPIO_Pin_1              //GREEN Led
 #define LED4_GPIO_PIN_SOURCE                GPIO_PinSource1         //GREEN Led
 #define LED4_GPIO_PORT                      GPIOB                   //GREEN Led
 #define LED4_GPIO_CLK                       RCC_AHB1Periph_GPIOB    //GREEN Led
+#define LED4_GPIO_MODE                      GPIO_Mode_AF            //GREEN Led
 #else
 #define LEDn                                4
 #define LED_MIRROR_SUPPORTED                1
