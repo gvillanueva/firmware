@@ -60,8 +60,8 @@ DFU_MAL_Prop_TypeDef DFU_Flash_cb =
     5, /* Host polling time interval in ms when waiting erasing operation complete */
     5  /* Host polling time interval in ms when waiting programming operation conplete */
 #else
-    50, /* Erase Time in ms */
-    50  /* Programming Time in ms */
+    0, /* Erase Time in ms */
+    0  /* Programming Time in ms */
 #endif
 };
 
