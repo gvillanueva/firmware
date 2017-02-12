@@ -83,7 +83,7 @@
    This area corresponds to the memory where the DFU code should be loaded
    and cannot be erased or everwritten by DFU application. */
 #if PLATFORM_ID == PLATFORM_DUO_PRODUCTION
-#define DFU_MAL_IS_PROTECTED_AREA(add)    (uint8_t)(((add >= 0x08000000) && (add < 0x08004000))? 1:0)
+#define DFU_MAL_IS_PROTECTED_AREA(add)    (uint8_t)(((add >= 0x08000000) && (add < 0x08008000))? 1:0)
 #else
 #define DFU_MAL_IS_PROTECTED_AREA(add)    (uint8_t)(((add >= 0x08000000) && (add < (APP_DEFAULT_ADD)))? 1:0)
 #endif

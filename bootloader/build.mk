@@ -5,7 +5,11 @@ ASRC += $(COMMON_BUILD)/arm/startup/startup_$(STM32_DEVICE_LC).S
 ASFLAGS += -I$(COMMON_BUILD)/arm/startup
 
 # Linker flags
+ifeq ("$(PLATFORM_ID)","88")
+LDFLAGS += -T$(COMMON_BUILD)/arm/linker/linker_$(STM32_DEVICE_LC)_ex.ld
+else
 LDFLAGS += -T$(COMMON_BUILD)/arm/linker/linker_$(STM32_DEVICE_LC).ld
+endif
 LDFLAGS += -Wl,-Map,$(TARGET_BASE).map
 
 LINKER_DEPS += $(COMMON_BUILD)/arm/linker/linker_$(STM32_DEVICE_LC).ld

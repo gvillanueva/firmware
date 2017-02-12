@@ -4,8 +4,8 @@ ENTRY( reset_handler );
 
 MEMORY
 {
-    DCT1_FLASH                 (rx)  : ORIGIN = 0x08004000,     LENGTH = 16K
-    DCT2_FLASH                 (rx)  : ORIGIN = 0x08008000,     LENGTH = 16K
+    DCT1_FLASH                 (rx)  : ORIGIN = 0x08008000,     LENGTH = 16K
+    DCT2_FLASH                 (rx)  : ORIGIN = 0x0800C000,     LENGTH = 16K
     APP_FLASH                  (rx)  : ORIGIN = 0x08040000,     LENGTH = 512K
 
     /* The SRAM area is offset to include the stack and static ram allocated at the end of the SRAM area.

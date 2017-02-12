@@ -143,8 +143,13 @@ extern "C" {
 #   error "FIRMWARE_IMAGE_SIZE too large to fit into internal flash"
 #endif
 
+#if PLATFORM_ID == PLATFORM_DUO_PRODUCTION
+/* Bootloader Flash regions that needs to be protected: 0x08000000 - 0x08007FFF */
+#define BOOTLOADER_FLASH_PAGES      (OB_WRP_Sector_0 | OB_WRP_Sector_1)
+#else
 /* Bootloader Flash regions that needs to be protected: 0x08000000 - 0x08003FFF */
 #define BOOTLOADER_FLASH_PAGES      (OB_WRP_Sector_0)
+#endif
 
 void FLASH_WriteProtection_Enable(uint32_t FLASH_Sectors);
 void FLASH_WriteProtection_Disable(uint32_t FLASH_Sectors);
