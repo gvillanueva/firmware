@@ -8,7 +8,7 @@
 #include "spi_flash.h"
 
 
-#define SFLASH_RESERVED_ADDRESS    0xC0000
+#define SFLASH_RESERVED_ADDRESS    0xB8000
 
 class SerialFlash
 {
