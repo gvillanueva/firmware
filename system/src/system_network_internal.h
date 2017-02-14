@@ -32,6 +32,7 @@
 #include "platforms.h"
 #if PLATFORM_ID == PLATFORM_DUO_PRODUCTION
 #include "ble_provision.h"
+#include "system_mode.h"
 #endif
 
 using namespace particle;
@@ -213,7 +214,7 @@ protected:
         system_notify_event(wifi_listen_begin, 0);
 
 #if PLATFORM_ID == PLATFORM_DUO_PRODUCTION
-        ble_provision_init();
+        if (ble_setup_get_state(NULL) == spark::feature::ENABLED) ble_provision_init();
 #endif
 
         /* Wait for SmartConfig/SerialConfig to finish */
@@ -563,7 +564,7 @@ public:
             if (WLAN_LISTEN_ON_FAILED_CONNECT) {
                 LED_SIGNAL_STOP(NETWORK_CONNECTING);
 #if PLATFORM_ID == PLATFORM_DUO_PRODUCTION
-                ble_provision_on_failed();
+                if (ble_setup_get_state(NULL) == spark::feature::ENABLED) ble_provision_on_failed();
 #endif
                 listen();
             } else {
@@ -613,7 +614,7 @@ public:
             WLAN_SMART_CONFIG_STOP = 0;
 
 #if PLATFORM_ID == PLATFORM_DUO_PRODUCTION
-            ble_provision_finalize(); // Reset to re-config BLE database for application upon smart config succeed.
+            if (ble_setup_get_state(NULL) == spark::feature::ENABLED) ble_provision_finalize(); // Reset to re-config BLE database for application upon smart config succeed.
 #endif
         }
     }

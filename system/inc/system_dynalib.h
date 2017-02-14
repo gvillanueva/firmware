@@ -85,6 +85,11 @@ DYNALIB_FN(BASE_IDX + 4, system, led_get_signal_theme, int(LEDSignalThemeData*, 
 DYNALIB_FN(BASE_IDX + 5, system, led_signal_status, const LEDStatusData*(int, void*))
 DYNALIB_FN(BASE_IDX + 6, system, led_pattern_period, uint16_t(int, int, void*))
 
+#if PLATFORM_ID == 88
+DYNALIB_FN(BASE_IDX + 7, system, ble_setup_set_state, void(spark::feature::State, void*))
+DYNALIB_FN(BASE_IDX + 8, system, ble_setup_get_state, spark::feature::State(void*))
+#endif
+
 DYNALIB_END(system)
 
 #undef BASE_IDX
