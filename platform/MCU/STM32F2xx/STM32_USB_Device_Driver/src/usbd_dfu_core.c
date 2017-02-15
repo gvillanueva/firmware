@@ -648,12 +648,12 @@ static uint8_t  EP0_TxSent (void  *pdev)
       Addr = ((wBlockNum - 2) * XFERSIZE) + Pointer;
 	  
 #if PLATFORM_ID == 88
-      if( (init_transfer==1) && (usbd_dfu_AltSet==0) && (Addr==0x0800C000 || Addr==0x08020000 || Addr==0x08040000) )
+      if( (init_transfer==1) && (usbd_dfu_AltSet==0) && (Addr==0x08010000 || Addr==0x08020000 || Addr==0x08040000) )
       {
         uint32_t first_word = *(uint32_t *)MAL_Buffer;
         if( (first_word > 0x20000000) && (first_word <= 0x20020000) )
         {
-          if(Addr == 0x0800C000)
+          if(Addr == 0x08010000)
             EXTRA_SYSTEM_FLAG(wiced_application) = 0x5AA5;
           else 
             EXTRA_SYSTEM_FLAG(wiced_application) = 0x1234;

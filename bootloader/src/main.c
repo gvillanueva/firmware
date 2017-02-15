@@ -148,7 +148,7 @@ int main(void)
             __asm( "MSR BASEPRI,   R1" );
             __asm( "MSR CONTROL,   R1" );
 
-            ApplicationAddress = 0x0800C000;
+            ApplicationAddress = 0x08010000;
             JumpAddress = *(__IO uint32_t*) (ApplicationAddress + 4);
             JumpAddress |= 0x00000001; /* Last bit of jump address indicates whether destination is Thumb or ARM code */
             __asm volatile ("BX %0" : : "r" (JumpAddress) );
