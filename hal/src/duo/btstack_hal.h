@@ -23,12 +23,12 @@ typedef enum BLEStatus {
 
 /**@brief BLE advertising report data. */
 typedef struct{
-    uint8_t peerAddrType;
-    bd_addr_t  peerAddr;
-    int     rssi;
-    uint8_t advEventType;
-    uint8_t advDataLen;
-    uint8_t advData[31];
+    bd_addr_type_t  peerAddrType;
+    bd_addr_t       peerAddr;
+    int             rssi;
+    uint8_t         advEventType;
+    uint8_t         advDataLen;
+    uint8_t         advData[31];
 }advertisementReport_t;
 
 typedef struct{
