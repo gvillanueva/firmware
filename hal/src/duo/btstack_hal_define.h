@@ -92,6 +92,7 @@
 #define BLE_GAP_ADV_TYPE_ADV_DIRECT_IND   0x01   /**< Connectable directed. */
 #define BLE_GAP_ADV_TYPE_ADV_SCAN_IND     0x02   /**< Scannable undirected. */
 #define BLE_GAP_ADV_TYPE_ADV_NONCONN_IND  0x03   /**< Non connectable undirected. */
+#define BLE_GAP_ADV_TYPE_SCAN_RSP         0x04   /**< Scan response. */
 /**@} */
 
 

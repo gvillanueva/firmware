@@ -7,11 +7,119 @@
 #include "spark_wiring.h"
 #include "btstack_hal.h"
 
+/*
+ * @author         Alexander Brevig <abrevig@wiring.org.co>
+ * @url            http://wiring.org.co/
+ * @url            http://alexanderbrevig.com/
+ * @contribution   Brett Hagman <bhagman@wiring.org.co>
+ *
+ * Implementation of a HashMap data structure.
+ */
+template<typename K, typename V, int capacity, uint8_t nil> class HashMap {
+public:
+    typedef bool (*comparator)(K, K);
+
+    HashMap(comparator compare = 0) {
+        cb_comparator = compare;
+        currentIndex = 0;
+    }
+
+    unsigned int size() const {
+        return currentIndex;
+    }
+
+    bool willOverflow() {
+        return (currentIndex + 1 > capacity);
+    }
+
+    bool contains(K key) {
+        for (int i = 0; i < currentIndex; i++) {
+            if (cb_comparator) {
+                if (cb_comparator(key, keys[i])) {
+                    return true;
+                }
+            }
+            else if (key == keys[i]) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    int addKey(K key, V value=nil) {
+       if ( !contains(key) && !willOverflow() ) {
+           memcpy(keys[currentIndex], key, sizeof(K));
+           values[currentIndex] = value;
+           currentIndex++;
+           return 0;
+       }
+       return -1;
+   }
+
+    V valueOf(K key) {
+        if (contains(key)) {
+            return values[indexOf(key)];
+        }
+        else {
+            return nil;
+        }
+    }
+
+    int setValue(K key, V value) {
+        if (contains(key)) {
+            values[indexOf(key)] = value;
+        }
+        return -1;
+    }
+
+    unsigned int indexOf(K key) {
+        for (int i = 0; i < currentIndex; i++) {
+            if (cb_comparator) {
+                if (cb_comparator(key, keys[i])) {
+                    return i;
+                }
+            }
+            else if (key == keys[i]) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    void remove(K key) {
+        int index = indexOf(key);
+        if (contains(key)) {
+            for (int i = index; i < capacity - 1; i++) {
+                memcpy(keys[i], keys[i + 1], sizeof(K));
+                values[i] = values[i + 1];
+            }
+            currentIndex--;
+        }
+    }
+
+    void clear(void) {
+        currentIndex = 0;
+    }
+
+protected:
+    K keys[capacity];
+    V values[capacity];
+    int currentIndex;
+    comparator cb_comparator;
+};
+
+
 class BLEDevice
 {
+private:
+    static bool filter_enable;
+    static bleAdvertismentCallback_t app_scan_report_callback;
+
+    static void ble_scan_report_callback(advertisementReport_t * report);
+
 public:
-    BLEDevice(){
-        //do nothing.
+    BLEDevice() {
+        // do nothing
     }
 
     /**
@@ -175,12 +283,15 @@ public:
     /**
      * @brief Start scanning.
      */
-    void startScanning(void);
+    void startScanning(bool filter=false);
 
     /**
      * @brief Stop scanning.
      */
     void stopScanning(void);
+
+    void removeFromScanCache(bd_addr_t addr);
+    void clearScanCache(void);
 
     /**
      * @brief Set parameters for LE Scan
@@ -817,7 +928,6 @@ public:
     uint8_t writeClientCharsConfigDescritpor(uint16_t con_handle, gatt_client_characteristic_t *characteristic, uint16_t configuration);
 
 };
-
 
 
 extern BLEDevice ble;

@@ -3,6 +3,15 @@
 
 #include "spark_wiring_btstack.h"
 
+static bool bd_addr_comparator(bd_addr_t new_addr, bd_addr_t exist_addr) {
+    return (memcmp(new_addr, exist_addr, BD_ADDR_LEN) ? 0 : 1);
+}
+
+static HashMap<bd_addr_t, uint8_t, 20, 0x00> hashM(bd_addr_comparator); // Be capable of caching 20 peripherals.
+
+bool BLEDevice::filter_enable = false;
+bleAdvertismentCallback_t BLEDevice::app_scan_report_callback = NULL;
+
 /***************************************************************
  *
  * Device API
@@ -147,14 +156,25 @@ void BLEDevice::setConnParams(le_connection_parameter_range_t range)
     hal_btstack_setConnParamsRange(range);
 }
 
-void BLEDevice::startScanning(void)
+void BLEDevice::startScanning(bool filter)
 {
     hal_btstack_startScanning();
+    filter_enable = filter;
 }
 
 void BLEDevice::stopScanning(void)
 {
     hal_btstack_stopScanning();
+}
+
+void BLEDevice::removeFromScanCache(bd_addr_t addr)
+{
+    hashM.remove(addr);
+}
+
+void BLEDevice::clearScanCache(void)
+{
+    hashM.clear();
 }
 
 void BLEDevice::setScanParams(uint8_t scan_type, uint16_t scan_interval, uint16_t scan_window)
@@ -164,7 +184,31 @@ void BLEDevice::setScanParams(uint8_t scan_type, uint16_t scan_interval, uint16_
 
 void BLEDevice::onScanReportCallback(bleAdvertismentCallback_t cb)
 {
-    hal_btstack_setBLEAdvertisementCallback(cb);
+    hal_btstack_setBLEAdvertisementCallback(ble_scan_report_callback);
+    app_scan_report_callback = cb;
+}
+
+void BLEDevice::ble_scan_report_callback(advertisementReport_t * report) {
+    uint8_t mask = 0x01, bit_masks;
+
+    if(filter_enable) {
+        if (hashM.willOverflow() || report->advEventType > BLE_GAP_ADV_TYPE_SCAN_RSP) return;
+
+        mask <<= report->advEventType;
+        if (!hashM.contains(report->peerAddr)) {
+            hashM.addKey(report->peerAddr, mask);
+        }
+        else {
+            bit_masks = hashM.valueOf(report->peerAddr);
+            if ((bit_masks & mask) == mask) return;
+            bit_masks |= mask;
+            hashM.setValue(report->peerAddr, bit_masks);
+        }
+    }
+
+    if (app_scan_report_callback != NULL) {
+        app_scan_report_callback(report);
+    }
 }
 
 /***************************************************************
