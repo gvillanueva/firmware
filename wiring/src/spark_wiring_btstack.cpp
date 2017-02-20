@@ -151,9 +151,19 @@ uint8_t BLEDevice::connect(bd_addr_t addr, bd_addr_type_t type)
     return hal_btstack_connect(addr, type);
 }
 
-void BLEDevice::setConnParams(le_connection_parameter_range_t range)
+void BLEDevice::setConnParamsRange(le_connection_parameter_range_t range)
 {
     hal_btstack_setConnParamsRange(range);
+}
+
+int BLEDevice::updateConnParams(uint16_t conn_handle, uint16_t conn_interval_min, uint16_t conn_interval_max, uint16_t latency, uint16_t supervision_timeout)
+{
+    return hal_btstack_updateConnectionParameters(conn_handle, conn_interval_min, conn_interval_max, latency, supervision_timeout);
+}
+
+int BLEDevice::requestConnParamsUpdate(uint16_t conn_handle, uint16_t conn_interval_min, uint16_t conn_interval_max, uint16_t latency, uint16_t supervision_timeout)
+{
+    return hal_btstack_requestConnectionParametersUpdate(conn_handle, conn_interval_min, conn_interval_max, latency, supervision_timeout);
 }
 
 void BLEDevice::startScanning(bool filter)
@@ -481,9 +491,9 @@ uint8_t BLEDevice::writeLongDescriptorValueWithOffset(uint16_t con_handle, uint1
     return hal_btstack_writeLongCharacteristicDescriptorUsingDescriptorHandleWithOffset(con_handle, descriptor_handle, offset, length, data);
 }
 
-uint8_t BLEDevice::writeClientCharsConfigDescritpor(uint16_t con_handle, gatt_client_characteristic_t *characteristic, uint16_t configuration)
+uint8_t BLEDevice::writeClientCharsConfigDescriptor(uint16_t con_handle, gatt_client_characteristic_t *characteristic, uint16_t configuration)
 {
-    return hal_btstack_WriteClientCharacteristicConfiguration(con_handle, characteristic, configuration);
+    return hal_btstack_writeClientCharacteristicConfiguration(con_handle, characteristic, configuration);
 }
 
 BLEDevice ble;

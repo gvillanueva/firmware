@@ -102,6 +102,8 @@ void hal_btstack_disconnect(uint16_t handle);
 uint8_t hal_btstack_connect(bd_addr_t addr, bd_addr_type_t type);
 
 void hal_btstack_setConnParamsRange(le_connection_parameter_range_t range);
+int hal_btstack_updateConnectionParameters(hci_con_handle_t con_handle, uint16_t conn_interval_min, uint16_t conn_interval_max, uint16_t conn_latency, uint16_t supervision_timeout);
+int hal_btstack_requestConnectionParametersUpdate(hci_con_handle_t con_handle, uint16_t conn_interval_min, uint16_t conn_interval_max, uint16_t conn_latency, uint16_t supervision_timeout);
 
 void hal_btstack_startScanning(void);
 void hal_btstack_stopScanning(void);
@@ -180,7 +182,7 @@ uint8_t hal_btstack_writeLongCharacteristicDescriptorUsingDescriptorHandle(uint1
 uint8_t hal_btstack_writeLongCharacteristicDescriptorUsingDescriptorHandleWithOffset(uint16_t con_handle, uint16_t descriptor_handle, uint16_t offset, uint16_t length, uint8_t *data);
 
 
-uint8_t hal_btstack_WriteClientCharacteristicConfiguration(uint16_t con_handle, gatt_client_characteristic_t *characteristic, uint16_t configuration);
+uint8_t hal_btstack_writeClientCharacteristicConfiguration(uint16_t con_handle, gatt_client_characteristic_t *characteristic, uint16_t configuration);
 void hal_btstack_listenForCharacteristicValueUpdates(gatt_client_notification_t *notification, uint16_t con_handle, gatt_client_characteristic_t *characteristic);
 
 

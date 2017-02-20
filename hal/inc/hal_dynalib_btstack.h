@@ -147,10 +147,11 @@ DYNALIB_FN(79, hal_btstack, hal_btstack_writeLongCharacteristicDescriptor, uint8
 DYNALIB_FN(80, hal_btstack, hal_btstack_writeLongCharacteristicDescriptorUsingDescriptorHandle, uint8_t(uint16_t, uint16_t, uint16_t, uint8_t*))
 DYNALIB_FN(81, hal_btstack, hal_btstack_writeLongCharacteristicDescriptorUsingDescriptorHandleWithOffset, uint8_t(uint16_t, uint16_t, uint16_t, uint16_t, uint8_t*))
 
-DYNALIB_FN(82, hal_btstack, hal_btstack_WriteClientCharacteristicConfiguration, uint8_t(uint16_t, gatt_client_characteristic_t*, uint16_t))
+DYNALIB_FN(82, hal_btstack, hal_btstack_writeClientCharacteristicConfiguration, uint8_t(uint16_t, gatt_client_characteristic_t*, uint16_t))
 DYNALIB_FN(83, hal_btstack, hal_btstack_listenForCharacteristicValueUpdates, void(gatt_client_notification_t*, uint16_t, gatt_client_characteristic_t*))
 
-
+DYNALIB_FN(84, hal_btstack, hal_btstack_updateConnectionParameters, int(hci_con_handle_t, uint16_t, uint16_t, uint16_t, uint16_t))
+DYNALIB_FN(85, hal_btstack, hal_btstack_requestConnectionParametersUpdate, int(hci_con_handle_t, uint16_t, uint16_t, uint16_t, uint16_t))
 DYNALIB_END(hal_btstack)
 
 #endif

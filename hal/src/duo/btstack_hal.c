@@ -806,6 +806,24 @@ void hal_btstack_setConnParamsRange(le_connection_parameter_range_t range)
 }
 
 /**
+ * @brief Update the connection parameters.
+ */
+int hal_btstack_updateConnectionParameters(hci_con_handle_t con_handle, uint16_t conn_interval_min,
+        uint16_t conn_interval_max, uint16_t conn_latency, uint16_t supervision_timeout)
+{
+    return gap_update_connection_parameters(con_handle, conn_interval_min, conn_interval_max, conn_latency, supervision_timeout);
+}
+
+/**
+ * @brief Request connection parameters update.
+ */
+int hal_btstack_requestConnectionParametersUpdate(hci_con_handle_t con_handle, uint16_t conn_interval_min,
+    uint16_t conn_interval_max, uint16_t conn_latency, uint16_t supervision_timeout)
+{
+    return gap_request_connection_parameter_update(con_handle, conn_interval_min, conn_interval_max, conn_latency, supervision_timeout);
+}
+
+/**
  * @brief Start scanning.
  */
 void hal_btstack_startScanning(void)
@@ -1325,7 +1343,7 @@ uint8_t hal_btstack_writeLongCharacteristicDescriptorUsingDescriptorHandleWithOf
 /**
  * @brief Writes the client characteristic configuration of the specified characteristic. It is used to subscribe for notifications or indications of the characteristic value. For notifications or indications specify: GATT_CLIENT_CHARACTERISTICS_CONFIGURATION_NOTIFICATION resp. GATT_CLIENT_CHARACTERISTICS_CONFIGURATION_INDICATION as configuration value.
  */
-uint8_t hal_btstack_WriteClientCharacteristicConfiguration(uint16_t con_handle, gatt_client_characteristic_t * characteristic, uint16_t configuration)
+uint8_t hal_btstack_writeClientCharacteristicConfiguration(uint16_t con_handle, gatt_client_characteristic_t * characteristic, uint16_t configuration)
 {
     gatt_client_operation = GATT_CLIENT_WRITE_CLIENT_CHARS_CONFIG_RESULT;
     if(configuration == GATT_CLIENT_CHARACTERISTICS_CONFIGURATION_NONE)

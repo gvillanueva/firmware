@@ -278,7 +278,17 @@ public:
     /**
      * @brief Set accepted connection parameter range.
      */
-    void setConnParams(le_connection_parameter_range_t range);
+    void setConnParamsRange(le_connection_parameter_range_t range);
+
+    /**
+     * @brief Update connection parameters.
+     */
+    int updateConnParams(uint16_t conn_handle, uint16_t conn_interval_min, uint16_t conn_interval_max, uint16_t latency, uint16_t supervision_timeout);
+
+    /**
+     * @brief Request a connection parameters update.
+     */
+    int requestConnParamsUpdate(uint16_t conn_handle, uint16_t conn_interval_min, uint16_t conn_interval_max, uint16_t latency, uint16_t supervision_timeout);
 
     /**
      * @brief Start scanning.
@@ -925,7 +935,7 @@ public:
      *         GATT_CLIENT_CHARACTERISTIC_INDICATION_NOT_SUPPORTED
      *         0::SUCCESS
      */
-    uint8_t writeClientCharsConfigDescritpor(uint16_t con_handle, gatt_client_characteristic_t *characteristic, uint16_t configuration);
+    uint8_t writeClientCharsConfigDescriptor(uint16_t con_handle, gatt_client_characteristic_t *characteristic, uint16_t configuration);
 
 };
 
