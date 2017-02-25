@@ -85,7 +85,7 @@ bool fetch_module(hal_module_t* target, const module_bounds_t* bounds, bool user
 #if PLATFORM_ID == 88
             // Duo: disable the module dependency validation so that we can OTA update 
             // system-part1 and system-part2 at the same time.
-            target->validity_result |= MODULE_VALIDATION_DEPENDENCIES;
+            target->validity_result |= MODULE_VALIDATION_DEPENDENCIES | (target->validity_checked & MODULE_VALIDATION_DEPENDENCIES_FULL);
             if(bounds->store != MODULE_STORE_MAIN)
             {
                 if ((target->validity_checked & MODULE_VALIDATION_INTEGRITY) && FLASH_VerifyCRC32(FLASH_SERIAL, bounds->start_address, module_length(target->info)))

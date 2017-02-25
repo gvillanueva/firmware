@@ -227,7 +227,7 @@ hal_update_complete_t HAL_FLASH_End(uint32_t file_address, uint32_t file_length,
     hal_update_complete_t result = HAL_UPDATE_ERROR;
 	
     module_bounds_t bounds;
-    if(file_address != HAL_OTA_FlashAddress()) // The image isn't stored from the start of the OTA region
+    if(file_address>HAL_OTA_FlashAddress() && file_address<(HAL_OTA_FlashAddress()+HAL_OTA_FlashLength())) // The image isn't stored from the start of the OTA region
     {
         bounds.start_address = file_address;
         bounds.end_address = file_address + file_length;
