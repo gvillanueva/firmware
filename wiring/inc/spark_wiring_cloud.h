@@ -29,6 +29,8 @@
 #include "spark_protocol_functions.h"
 #include "spark_wiring_system.h"
 #include "spark_wiring_watchdog.h"
+#include "spark_wiring_async.h"
+#include "spark_wiring_flags.h"
 #include "interrupts_hal.h"
 #include "system_mode.h"
 #include <functional>
@@ -47,27 +49,14 @@ typedef std::function<void (const char*, const char*)> wiring_event_handler_t;
 #define	__XSTRING(x)	__STRING(x)	/* expand x, then stringify */
 #endif
 
-class PublishFlag
-{
-public:
-	typedef uint8_t flag_t;
-	PublishFlag(flag_t flag) : flag_(flag) {}
-
-	explicit operator flag_t() const { return flag_; }
-
-	flag_t flag() const { return flag_; }
-
-private:
-	flag_t flag_;
-
-
-};
+struct PublishFlagType; // Tag type for Particle.publish() flags
+typedef particle::Flags<PublishFlagType, uint8_t> PublishFlags;
+typedef PublishFlags::FlagType PublishFlag;
 
 const PublishFlag PUBLIC(PUBLISH_EVENT_FLAG_PUBLIC);
 const PublishFlag PRIVATE(PUBLISH_EVENT_FLAG_PRIVATE);
 const PublishFlag NO_ACK(PUBLISH_EVENT_FLAG_NO_ACK);
 const PublishFlag WITH_ACK(PUBLISH_EVENT_FLAG_WITH_ACK);
-
 
 class CloudClass {
 
@@ -221,24 +210,19 @@ public:
       return _function(funcKey, std::bind(func, instance, _1));
     }
 
-    inline bool publish(const char *eventName, PublishFlag eventType=PUBLIC)
+    inline particle::Future<bool> publish(const char *eventName, PublishFlags flags1 = PUBLIC, PublishFlags flags2 = PublishFlags())
     {
-        return publish(eventName, NULL, 60, PublishFlag::flag_t(eventType));
+        return publish(eventName, NULL, flags1, flags2);
     }
 
-    inline bool publish(const char *eventName, const char *eventData, PublishFlag eventType=PUBLIC)
+    inline particle::Future<bool> publish(const char *eventName, const char *eventData, PublishFlags flags1 = PUBLIC, PublishFlags flags2 = PublishFlags())
     {
-        return publish(eventName, eventData, 60, PublishFlag::flag_t(eventType));
+        return publish(eventName, eventData, 60, flags1, flags2);
     }
 
-    inline bool publish(const char *eventName, const char *eventData, PublishFlag f1, PublishFlag f2)
+    inline particle::Future<bool> publish(const char *eventName, const char *eventData, int ttl, PublishFlags flags1 = PUBLIC, PublishFlags flags2 = PublishFlags())
     {
-        return publish(eventName, eventData, 60, f1.flag()+f2.flag());
-    }
-
-    inline bool publish(const char *eventName, const char *eventData, int ttl, PublishFlag eventType=PUBLIC)
-    {
-        return publish(eventName, eventData, ttl, PublishFlag::flag_t(eventType));
+        return publish_event(eventName, eventData, ttl, flags1 | flags2);
     }
 
     inline bool subscribe(const char *eventName, EventHandler handler, Spark_Subscription_Scope_TypeDef scope=ALL_DEVICES)
@@ -349,7 +333,7 @@ private:
 
     static void call_wiring_event_handler(const void* param, const char *event_name, const char *data);
 
-    static bool publish(const char *eventName, const char *eventData, int ttl, uint32_t flags);
+    static particle::Future<bool> publish_event(const char *eventName, const char *eventData, int ttl, PublishFlags flags);
 
     static ProtocolFacade* sp()
     {
