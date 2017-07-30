@@ -38,11 +38,12 @@
 #include "hal_dynalib_hci_usart.h"
 #include "hal_dynalib_btstack.h"
 #endif
+#include "hal_dynalib_rgbled.h"
+#include "hal_dynalib_dct.h"
+
 #ifndef HAL_USB_EXCLUDE
 #include "hal_dynalib_usb.h"
 #endif
-
-#include "hal_dynalib_rgbled.h"
 
 #ifndef HAL_BOOTLOADER_EXCLUDE
 #include "hal_dynalib_bootloader.h"

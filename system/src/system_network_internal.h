@@ -28,6 +28,7 @@
 #include "system_cloud_internal.h"
 #include "system_network.h"
 #include "system_threading.h"
+#include "system_mode.h"
 
 #include "platforms.h"
 #if PLATFORM_ID == PLATFORM_DUO_PRODUCTION
@@ -74,6 +75,30 @@ inline void CLR_WLAN_WD() {
     WAN_WD_DEBUG("WD Cleared, was %d",wlan_watchdog_duration);
 }
 
+// #define DEBUG_NETWORK_STATE
+#ifdef DEBUG_NETWORK_STATE
+class ManagedNetworkInterface;
+
+// Helper class dumping internal state of a ManagedNetworkInterface instance
+class NetworkStateLogger {
+public:
+    NetworkStateLogger(const ManagedNetworkInterface& nif, const char* func);
+    ~NetworkStateLogger();
+
+private:
+    const ManagedNetworkInterface& nif_;
+    const char* const func_;
+
+    void dump() const;
+};
+
+#define LOG_NETWORK_STATE() \
+        const NetworkStateLogger PP_CAT(_networkStateLogger_, __COUNTER__)(*this, __PRETTY_FUNCTION__)
+
+#else // !defined(DEBUG_NETWORK_STATE)
+#define LOG_NETWORK_STATE()
+#endif
+
 /**
  * Internal network interface class to provide polymorphic behavior for each
  * network type.  This is not part of the dynalib so functions can freely evolve.
@@ -88,7 +113,6 @@ struct NetworkInterface
     virtual void off(bool disconnect_cloud=false)=0;
     virtual void connect(bool listen_enabled=true)=0;
     virtual bool connecting()=0;
-    virtual bool connected()=0;
     virtual void connect_cancel(bool cancel)=0;
     /**
      * Force a manual disconnct.
@@ -118,11 +142,15 @@ struct NetworkInterface
     virtual void update_config(bool force=false)=0;
     virtual void* config()=0;       // not really happy about lack of type
 
+    virtual int set_hostname(const char* hostname)=0;
+    virtual int get_hostname(char* buffer, size_t buffer_len, bool noDefault=false)=0;
+
 };
 
 
 class ManagedNetworkInterface : public NetworkInterface
 {
+private:
     volatile uint8_t WLAN_DISCONNECT;
     volatile uint8_t WLAN_DELETE_PROFILES;
     volatile uint8_t WLAN_SMART_CONFIG_START; // Set to 'true' when listening mode is pending
@@ -130,7 +158,7 @@ class ManagedNetworkInterface : public NetworkInterface
     volatile uint8_t WLAN_SMART_CONFIG_FINISHED;
     volatile uint8_t WLAN_CONNECTED;
     volatile uint8_t WLAN_CONNECTING;
-    volatile uint8_t WLAN_DHCP;
+    volatile uint8_t WLAN_DHCP_PENDING;
     volatile uint8_t WLAN_CAN_SHUTDOWN;
     volatile uint8_t WLAN_LISTEN_ON_FAILED_CONNECT;
 #if PLATFORM_ID == PLATFORM_DUO_PRODUCTION
@@ -144,6 +172,10 @@ class ManagedNetworkInterface : public NetworkInterface
 #endif
     volatile uint32_t start_listening_timer_base;
     volatile uint32_t start_listening_timer_duration;
+
+#ifdef DEBUG_NETWORK_STATE
+    friend class NetworkStateLogger;
+#endif
 
 protected:
 
@@ -194,9 +226,9 @@ protected:
 
     template<typename T> void start_listening(SystemSetupConsole<T>& console)
     {
+        LOG_NETWORK_STATE();
         WLAN_SMART_CONFIG_ACTIVE = 1;
         WLAN_SMART_CONFIG_FINISHED = 0;
-        WLAN_SMART_CONFIG_STOP = 0;
         WLAN_SERIAL_CONFIG_DONE = 0;
 #if PLATFORM_ID == PLATFORM_DUO_PRODUCTION
         WLAN_OTA_UPDATE_FINISHED = 0;
@@ -204,7 +236,14 @@ protected:
         bool wlanStarted = SPARK_WLAN_STARTED;
 
         cloud_disconnect();
-        LED_SIGNAL_START(LISTENING_MODE, NORMAL); // TODO: Use BACKGROUND priority if threading is enabled?
+
+        if (system_thread_get_state(nullptr) == spark::feature::ENABLED) {
+            LED_SIGNAL_START(LISTENING_MODE, NORMAL);
+        } else {
+            // Using critical priority here, since in a single-threaded configuration the listening
+            // mode blocks an application code from running
+            LED_SIGNAL_START(LISTENING_MODE, CRITICAL);
+        }
 
         on_start_listening();
         start_listening_timer_create();
@@ -218,13 +257,13 @@ protected:
 #endif
 
         /* Wait for SmartConfig/SerialConfig to finish */
-        while (network_listening(0, 0, NULL))
+        while (WLAN_SMART_CONFIG_ACTIVE && !WLAN_SMART_CONFIG_FINISHED && !WLAN_SERIAL_CONFIG_DONE)
         {
             if (WLAN_DELETE_PROFILES)
             {
                 // Get base color used for the listening mode indication
                 const LEDStatusData* status = led_signal_status(LED_SIGNAL_LISTENING_MODE, nullptr);
-                LEDStatus led(status ? status->color : RGB_COLOR_BLUE, LED_PRIORITY_IMPORTANT);
+                LEDStatus led(status ? status->color : RGB_COLOR_BLUE, LED_PRIORITY_CRITICAL);
                 led.setActive();
                 int toggle = 25;
                 while (toggle--)
@@ -256,6 +295,7 @@ protected:
                 console.loop();
             }
 #if PLATFORM_THREADING
+            SystemISRTaskQueue.process();
             if (!APPLICATION_THREAD_CURRENT()) {
                 SystemThread.process();
             }
@@ -314,6 +354,15 @@ protected:
      */
     virtual void on_finalize_listening(bool external_process_complete)=0;
 
+    virtual void config_hostname() {
+        char hostname[33] = {0};
+        if (get_hostname(hostname, sizeof(hostname), true) || strlen(hostname) == 0)
+        {
+            String deviceId = spark_deviceID();
+            set_hostname(deviceId.c_str());
+        }
+    }
+
 public:
 
     virtual void get_ipconfig(IPConfig* config)=0;
@@ -330,13 +379,9 @@ public:
         WLAN_DISCONNECT = disconnect;
     }
 
-    bool connected() override
-    {
-        return WLAN_CONNECTED;
-    }
-
     void listen(bool stop=false) override
     {
+        LOG_NETWORK_STATE();
         if (stop) {
             WLAN_LISTEN_ON_FAILED_CONNECT = 0;  // ensure a failed wifi connection attempt doesn't bring the device back to listening mode
             WLAN_SMART_CONFIG_START = 0; // Cancel pending transition to listening mode
@@ -354,9 +399,9 @@ public:
     bool listening() override
     {
 #if PLATFORM_ID == PLATFORM_DUO_PRODUCTION
-        return (WLAN_SMART_CONFIG_ACTIVE && !(WLAN_SMART_CONFIG_FINISHED || WLAN_SERIAL_CONFIG_DONE || WLAN_OTA_UPDATE_FINISHED));
+        return ((WLAN_SMART_CONFIG_START || WLAN_SMART_CONFIG_ACTIVE) && (!WLAN_OTA_UPDATE_FINISHED));
 #else
-        return (WLAN_SMART_CONFIG_ACTIVE && !(WLAN_SMART_CONFIG_FINISHED || WLAN_SERIAL_CONFIG_DONE));
+        return (WLAN_SMART_CONFIG_START || WLAN_SMART_CONFIG_ACTIVE);
 #endif
     }
 
@@ -371,8 +416,9 @@ public:
 
     void connect(bool listen_enabled=true) override
     {
-        INFO("ready(): %d; connecting(): %d; listening(): %d; WLAN_SMART_CONFIG_START: %d", (int)ready(), (int)connecting(),
-                (int)listening(), (int)WLAN_SMART_CONFIG_START);
+        LOG_NETWORK_STATE();
+        // INFO("ready(): %d; connecting(): %d; listening(): %d; WLAN_SMART_CONFIG_START: %d", (int)ready(), (int)connecting(),
+        //        (int)listening(), (int)WLAN_SMART_CONFIG_START);
         if (!ready() && !connecting() && !listening() && !WLAN_SMART_CONFIG_START) // Don't try to connect if listening mode is active or pending
         {
             bool was_sleeping = SPARK_WLAN_SLEEP;
@@ -395,6 +441,7 @@ public:
             }
             else
             {
+                config_hostname();
                 LED_SIGNAL_START(NETWORK_CONNECTING, NORMAL);
                 WLAN_CONNECTING = 1;
                 INFO("ARM_WLAN_WD 1");
@@ -407,6 +454,7 @@ public:
 
     void disconnect() override
     {
+        LOG_NETWORK_STATE();
         if (SPARK_WLAN_STARTED)
         {
             const bool was_connected = WLAN_CONNECTED;
@@ -414,7 +462,7 @@ public:
             WLAN_DISCONNECT = 1; //Do not ARM_WLAN_WD() in WLAN_Async_Callback()
             WLAN_CONNECTING = 0;
             WLAN_CONNECTED = 0;
-            WLAN_DHCP = 0;
+            WLAN_DHCP_PENDING = 0;
 
             cloud_disconnect();
             if (was_connected) {
@@ -434,7 +482,7 @@ public:
 
     bool ready() override
     {
-        return (SPARK_WLAN_STARTED && WLAN_DHCP);
+        return (SPARK_WLAN_STARTED && WLAN_CONNECTED);
     }
 
     bool connecting() override
@@ -444,6 +492,7 @@ public:
 
     void on() override
     {
+        LOG_NETWORK_STATE();
         if (!SPARK_WLAN_STARTED)
         {
             system_notify_event(network_status, network_status_powering_on);
@@ -459,6 +508,7 @@ public:
 
     void off(bool disconnect_cloud=false) override
     {
+        LOG_NETWORK_STATE();
         if (SPARK_WLAN_STARTED)
         {
             disconnect();
@@ -467,13 +517,13 @@ public:
             off_now();
 
             SPARK_WLAN_SLEEP = 1;
-#if !SPARK_NO_CLOUD
+#ifndef SPARK_NO_CLOUD
             if (disconnect_cloud) {
                 spark_cloud_flag_disconnect();
             }
 #endif
             SPARK_WLAN_STARTED = 0;
-            WLAN_DHCP = 0;
+            WLAN_DHCP_PENDING = 0;
             WLAN_CONNECTED = 0;
             WLAN_CONNECTING = 0;
             WLAN_SERIAL_CONFIG_DONE = 1;
@@ -484,20 +534,19 @@ public:
 
     void notify_listening_complete()
     {
+        LOG_NETWORK_STATE();
         WLAN_SMART_CONFIG_FINISHED = 1;
-        WLAN_SMART_CONFIG_STOP = 1;
     }
 
     void notify_connected()
     {
-        WLAN_CONNECTED = 1;
-        WLAN_CONNECTING = 0;
-
+        LOG_NETWORK_STATE();
         /* If DHCP has completed, don't re-arm WD due to spurious notify_connected()
          * from WICED on loss of internet and reconnect
          */
-        if (!WLAN_DISCONNECT && !WLAN_DHCP)
+        if (!WLAN_DISCONNECT && !WLAN_CONNECTED)
         {
+            WLAN_DHCP_PENDING = 1;
             INFO("ARM_WLAN_WD 2");
             ARM_WLAN_WD(CONNECT_TO_ADDRESS_MAX);
             LED_SIGNAL_START(NETWORK_DHCP, NORMAL);
@@ -506,61 +555,54 @@ public:
 
     void notify_disconnected()
     {
+        LOG_NETWORK_STATE();
         cloud_disconnect(false); // don't close the socket on the callback since this causes a lockup on the Core
-        if (WLAN_CONNECTED)     /// unsolicited disconnect
-        {
-            //Breathe blue if established connection gets disconnected
-            if (!WLAN_DISCONNECT) {
-                //if WiFi.disconnect called, do not enable wlan watchdog
-                INFO("ARM_WLAN_WD 3");
-                ARM_WLAN_WD(DISCONNECT_TO_RECONNECT);
-            } else {
-                LED_SIGNAL_STOP(NETWORK_CONNECTING);
+        if (WLAN_CONNECTING || WLAN_CONNECTED) {
+            if (WLAN_CONNECTED) {
+                // "Disconnecting" event is generated only for a successfully established connection
+                system_notify_event(network_status, network_status_disconnecting);
             }
-            LED_SIGNAL_STOP(NETWORK_DHCP);
-            LED_SIGNAL_STOP(NETWORK_CONNECTED);
-
+            // "Connecting" event should be always followed by either "connected" or "disconnected" event
             system_notify_event(network_status, network_status_disconnected);
         }
-        else if (!WLAN_SMART_CONFIG_ACTIVE)
-        {
-            //Do not enter if smart config related disconnection happens
-            //Blink green if connection fails because of wrong password
-            if (!WLAN_DISCONNECT) {
-                INFO("ARM_WLAN_WD 4");
-                ARM_WLAN_WD(DISCONNECT_TO_RECONNECT);
-            } else {
-                LED_SIGNAL_STOP(NETWORK_CONNECTING);
-            }
-            LED_SIGNAL_STOP(NETWORK_DHCP);
-            LED_SIGNAL_STOP(NETWORK_CONNECTED);
+        // Do not enable WLAN watchdog if WiFi.disconnect() has been called or smart config is active
+        if (!WLAN_DISCONNECT && !WLAN_SMART_CONFIG_ACTIVE) {
+            INFO("ARM_WLAN_WD 3");
+            ARM_WLAN_WD(DISCONNECT_TO_RECONNECT);
+            // Keep blinking green if automatic reconnection is pending
+        } else {
+            LED_SIGNAL_STOP(NETWORK_CONNECTING);
         }
+
+        LED_SIGNAL_STOP(NETWORK_CONNECTED);
+        LED_SIGNAL_STOP(NETWORK_DHCP);
+
         WLAN_CONNECTED = 0;
         WLAN_CONNECTING = 0;
-        WLAN_DHCP = 0;
+        WLAN_DHCP_PENDING = 0;
     }
 
     void notify_dhcp(bool dhcp)
     {
+        LOG_NETWORK_STATE();
         WLAN_CONNECTING = 0;
+        WLAN_DHCP_PENDING = 0;
         LED_SIGNAL_STOP(NETWORK_DHCP);
         if (dhcp)
         {
+            // notify_dhcp() is called even in case of static IP configuration, so here we notify
+            // final connection state for both dynamic and static IP configurations
             INFO("CLR_WLAN_WD 1, DHCP success");
             CLR_WLAN_WD();
-            WLAN_DHCP = 1;
+            WLAN_CONNECTED = 1;
             WLAN_LISTEN_ON_FAILED_CONNECT = false;
             LED_SIGNAL_START(NETWORK_CONNECTED, BACKGROUND);
             LED_SIGNAL_STOP(NETWORK_CONNECTING);
-
-            // notify_dhcp() is called even in case of static IP configuration, so here we notify
-            // final connection state for both dynamic and static IP configurations
             system_notify_event(network_status, network_status_connected);
         }
         else
         {
             config_clear();
-            WLAN_DHCP = 0;
             if (WLAN_LISTEN_ON_FAILED_CONNECT) {
                 LED_SIGNAL_STOP(NETWORK_CONNECTING);
 #if PLATFORM_ID == PLATFORM_DUO_PRODUCTION
@@ -568,11 +610,11 @@ public:
 #endif
                 listen();
             } else {
-                INFO("DHCP fail, ARM_WLAN_WD 5");
+                INFO("DHCP fail, ARM_WLAN_WD 4");
                 ARM_WLAN_WD(DISCONNECT_TO_RECONNECT);
             }
 
-            // "Connecting" event should be followed by either "connected" or "disconnected" event
+            // "Connecting" event should be always followed by either "connected" or "disconnected" event
             system_notify_event(network_status, network_status_disconnected);
         }
     }
@@ -608,22 +650,17 @@ public:
         // 2. CC3000 established AP connection
         // 3. DHCP IP is configured
         // then send mDNS packet to stop external SmartConfig application
-        if ((WLAN_SMART_CONFIG_STOP == 1) && (WLAN_DHCP == 1) && (WLAN_CONNECTED == 1))
+        if ((WLAN_SMART_CONFIG_FINISHED == 1) && (WLAN_CONNECTED == 1))
         {
             on_setup_cleanup();
-            WLAN_SMART_CONFIG_STOP = 0;
 
 #if PLATFORM_ID == PLATFORM_DUO_PRODUCTION
             if (ble_setup_get_state(NULL) == spark::feature::ENABLED) ble_provision_finalize(); // Reset to re-config BLE database for application upon smart config succeed.
 #endif
+
+            WLAN_SMART_CONFIG_FINISHED = 0;
         }
     }
-
-    inline bool hasDHCP()
-    {
-        return WLAN_DHCP && !SPARK_WLAN_SLEEP;
-    }
-
 };
 
 extern ManagedNetworkInterface& network;
@@ -645,7 +682,7 @@ public:
     {
         // todo - IPv6 may not set this field.
         bool fetched_config = ip_config.nw.aucIP.ipv4!=0;
-        if (hasDHCP() || force)
+        if (ready() || force)
         {
             if (!fetched_config || force)
             {
@@ -669,7 +706,44 @@ public:
 
 };
 
+#ifdef DEBUG_NETWORK_STATE
+#define NETWORK_STATE_PRINTF(...) \
+        do { \
+            LOG_PRINTF_C(TRACE, "system.network.state", ##__VA_ARGS__); \
+        } while (false)
 
+inline NetworkStateLogger::NetworkStateLogger(const ManagedNetworkInterface& nif, const char* func) :
+        nif_(nif),
+        func_(func) {
+    NETWORK_STATE_PRINTF("-> %s\r\n", func_);
+    dump();
+}
+
+inline NetworkStateLogger::~NetworkStateLogger() {
+    NETWORK_STATE_PRINTF("<- %s\r\n", func_);
+    dump();
+}
+
+inline void NetworkStateLogger::dump() const {
+    NETWORK_STATE_PRINTF("WLAN_DISCONNECT: %d\r\n", (int)nif_.WLAN_DISCONNECT);
+    NETWORK_STATE_PRINTF("WLAN_DELETE_PROFILES: %d\r\n", (int)nif_.WLAN_DELETE_PROFILES);
+    NETWORK_STATE_PRINTF("WLAN_SMART_CONFIG_START: %d\r\n", (int)nif_.WLAN_SMART_CONFIG_START);
+    NETWORK_STATE_PRINTF("WLAN_SMART_CONFIG_ACTIVE: %d\r\n", (int)nif_.WLAN_SMART_CONFIG_ACTIVE);
+    NETWORK_STATE_PRINTF("WLAN_SMART_CONFIG_FINISHED: %d\r\n", (int)nif_.WLAN_SMART_CONFIG_FINISHED);
+    NETWORK_STATE_PRINTF("WLAN_CONNECTED: %d\r\n", (int)nif_.WLAN_CONNECTED);
+    NETWORK_STATE_PRINTF("WLAN_CONNECTING: %d\r\n", (int)nif_.WLAN_CONNECTING);
+    NETWORK_STATE_PRINTF("WLAN_DHCP_PENDING: %d\r\n", (int)nif_.WLAN_DHCP_PENDING);
+    NETWORK_STATE_PRINTF("WLAN_CAN_SHUTDOWN: %d\r\n", (int)nif_.WLAN_CAN_SHUTDOWN);
+    NETWORK_STATE_PRINTF("WLAN_LISTEN_ON_FAILED_CONNECT: %d\r\n", (int)nif_.WLAN_LISTEN_ON_FAILED_CONNECT);
+    // Global flags
+    NETWORK_STATE_PRINTF("SPARK_WLAN_RESET: %d\r\n", (int)SPARK_WLAN_RESET);
+    NETWORK_STATE_PRINTF("SPARK_WLAN_SLEEP: %d\r\n", (int)SPARK_WLAN_SLEEP);
+    NETWORK_STATE_PRINTF("SPARK_WLAN_STARTED: %d\r\n", (int)SPARK_WLAN_STARTED);
+    NETWORK_STATE_PRINTF("wlan_watchdog_duration: %d\r\n", (int)wlan_watchdog_duration);
+    NETWORK_STATE_PRINTF("--------------------------------\r\n");
+}
+
+#undef NETWORK_STATE_PRINTF
+#endif // defined(DEBUG_NETWORK_STATE)
 
 #endif  /* SYSTEM_NETWORK_INTERNAL_H */
-
