@@ -54,6 +54,7 @@ typedef struct{
 }hal_notifyDataQueue_t;
 
 static hal_notifyDataQueue_t notify_queue={.head=0,.tail=0};
+static bool pending_notify_complete;
 
 /**@brief btstack state. */
 static int btstack_state;
@@ -297,6 +298,10 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
             }
             break;
 
+        case ATT_EVENT_HANDLE_VALUE_INDICATION_COMPLETE:
+            pending_notify_complete = false;
+            break;
+
         default:
             break;
      }
@@ -509,12 +514,13 @@ void hal_btstack_init(void)
         sm_init();
 
         att_server_init(att_db_util_get_address(),att_read_callback, att_write_callback);
-        //att_server_register_packet_handler(packet_handler);
+        att_server_register_packet_handler(packet_handler);
 
         gatt_client_init();
 
         client_notification_init();
         memset(&notify_queue, 0x00, sizeof(hal_notifyDataQueue_t));
+        pending_notify_complete = false;
 
         // turn on!
         btstack_state = 0;
@@ -525,9 +531,9 @@ void hal_btstack_init(void)
         }
 
         hal_btstack_thread_quit = 0;
-        wiced_rtos_create_thread(&hal_btstack_thread_, WICED_APPLICATION_PRIORITY, "BLE provision", hal_stack_thread, 1024*3, NULL);
         hci_init_flag = 1;
         connect_handle = 0xFFFF;
+        wiced_rtos_create_thread(&hal_btstack_thread_, WICED_APPLICATION_PRIORITY, "BLE provision", hal_stack_thread, 1024*3, NULL);
     }
 }
 
@@ -550,14 +556,17 @@ void hal_btstack_loop_execute(void)
 {
     if(hci_init_flag)
     {
-        if(notify_queneUsedSize() && att_server_can_send_packet_now(connect_handle))
+        if (!pending_notify_complete && notify_queneUsedSize() && att_server_can_send_packet_now(connect_handle))
         {
             hal_notifyData_t data;
+            int ret;
             notify_queneRead(&data);
-            if((data.data_flag_len & 0x80) == 0x00)
-                att_server_notify(connect_handle, data.handle, data.data, data.data_flag_len&0x7F);
+            if ((data.data_flag_len & 0x80) == 0x00)
+                ret = att_server_notify(connect_handle, data.handle, data.data, data.data_flag_len&0x7F);
             else
-                att_server_indicate(connect_handle, data.handle, data.data, data.data_flag_len&0x7F);
+                ret = att_server_indicate(connect_handle, data.handle, data.data, data.data_flag_len&0x7F);
+            if (ret == 0)
+                pending_notify_complete = true;
         }
         btstack_run_loop_execute();
     }
@@ -778,6 +787,7 @@ static void disconnect_task(struct btstack_timer_source *ts)
         gap_disconnect(disconnect_handle);
     disconnect_handle = 0xFFFF;
     memset(&notify_queue, 0x00, sizeof(hal_notifyDataQueue_t));
+    pending_notify_complete = false;
 }
 
 void hal_btstack_disconnect(uint16_t handle)
@@ -1493,8 +1503,3 @@ static void client_notification_remove(uint16_t con_handle, gatt_client_characte
         }
     }
 }
-
-
-
-
-
