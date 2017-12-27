@@ -57,7 +57,7 @@ static hal_notifyDataQueue_t notify_queue={.head=0,.tail=0};
 static bool pending_notify_complete;
 
 /**@prepared write. */
-static uint8_t prepared_request[MAC_PREPARED_WRITE_SIZE];
+static uint8_t prepared_request[MAX_PREPARED_WRITE_SIZE];
 static uint16_t prepared_request_len;
 static uint16_t prepared_request_att_handle;
 
