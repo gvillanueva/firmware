@@ -543,9 +543,11 @@ void hal_btstack_deInit(void)
     {
         hci_init_flag = 0;
         have_custom_addr = false;
-        hci_close();
-        btstack_run_loop_deInit();
         hal_btstack_thread_quit = 1;
+	wiced_rtos_thread_join(&hal_btstack_thread_);
+        btstack_run_loop_deInit();
+	hci_power_control(HCI_POWER_OFF);
+        hci_close();
     }
 }
 
