@@ -56,6 +56,11 @@ typedef struct{
 static hal_notifyDataQueue_t notify_queue={.head=0,.tail=0};
 static bool pending_notify_complete;
 
+/**@prepared write. */
+static uint8_t prepared_request[MAX_PREPARED_WRITE_SIZE];
+static uint16_t prepared_request_len;
+static uint16_t prepared_request_att_handle;
+
 /**@brief btstack state. */
 static int btstack_state;
 static uint8_t hci_init_flag = 0;
@@ -226,7 +231,31 @@ static uint16_t att_read_callback(uint16_t con_handle, uint16_t att_handle, uint
  * @returns 0 if write was ok, ATT_ERROR_PREPARE_QUEUE_FULL if no space in queue, ATT_ERROR_INVALID_OFFSET if offset is larger than max buffer
  */
 static int att_write_callback(uint16_t con_handle, uint16_t att_handle, uint16_t transaction_mode, uint16_t offset, uint8_t *buffer, uint16_t buffer_size){
-    if(gattWriteCallback){
+    if (gattWriteCallback) {
+        if (transaction_mode == ATT_TRANSACTION_MODE_ACTIVE) {
+            if (prepared_request_len > 0 && prepared_request_att_handle != att_handle)
+                return ATT_ERROR_UNLIKELY_ERROR;
+            if (offset != prepared_request_len)
+                return ATT_ERROR_INVALID_OFFSET;
+            if (buffer_size + prepared_request_len >= sizeof(prepared_request))
+                return ATT_ERROR_PREPARE_QUEUE_FULL;
+            prepared_request_att_handle = att_handle;
+            memcpy(prepared_request + prepared_request_len, buffer, buffer_size);
+            prepared_request_len += buffer_size;
+            return 0;
+        } else if (transaction_mode == ATT_TRANSACTION_MODE_CANCEL) {
+            prepared_request_len = 0;
+            prepared_request_att_handle = 0;
+            return 0;
+        } else if (transaction_mode == ATT_TRANSACTION_MODE_EXECUTE) {
+            if (prepared_request_att_handle == 0 || prepared_request_len == 0)
+                return ATT_ERROR_UNLIKELY_ERROR;
+            buffer = prepared_request;
+            buffer_size = prepared_request_len;
+            att_handle = prepared_request_att_handle;
+            prepared_request_len = 0;
+            prepared_request_att_handle = 0;        
+        }
         return gattWriteCallback(att_handle, buffer, buffer_size);
     }
     return 0;
