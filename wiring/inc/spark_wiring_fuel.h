@@ -53,10 +53,12 @@ class FuelGauge {
 
   public:
 
-    FuelGauge();
+    FuelGauge(bool _lock = false);
+    ~FuelGauge();
     boolean begin();
     float getVCell();
     float getSoC();
+    float getNormalizedSoC();
     int getVersion();
     byte getCompensateValue();
     byte getAlertThreshold();
@@ -68,11 +70,16 @@ class FuelGauge {
     void sleep();
     void wakeup();
 
+    bool lock();
+    bool unlock();
+
   private:
 
     void readConfigRegister(byte &MSB, byte &LSB);
     void readRegister(byte startAddress, byte &MSB, byte &LSB);
     void writeRegister(byte address, byte MSB, byte LSB);
+
+    bool lock_;
 };
 
 #endif

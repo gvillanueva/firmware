@@ -71,6 +71,7 @@
 #include "spark_wiring_async.h"
 #include "spark_wiring_error.h"
 #include "spark_wiring_led.h"
+#include "spark_wiring_diagnostics.h"
 #include "fast_pin.h"
 #include "string_convert.h"
 #include "debug_output_handler.h"

@@ -75,6 +75,10 @@ enum LoggingFeature {
 };
 #endif
 
+enum WiFiTesterFeature {
+    FEATURE_WIFITESTER = 1
+};
+
 class SystemClass {
 public:
 
@@ -209,6 +213,8 @@ public:
     bool enableFeature(LoggingFeature feature);
 #endif
 
+    static bool enableFeature(const WiFiTesterFeature feature);
+
     String version()
     {
         SystemVersionInfo info;
@@ -299,6 +305,15 @@ public:
     void disableButtonMirror(bool bootloader=true) const
     {
         HAL_Core_Button_Mirror_Pin_Disable((uint8_t)bootloader, 0, NULL);
+    }
+
+    // This function is similar to the global millis() but returns a 64-bit value
+    static uint64_t millis() {
+        return hal_timer_millis(nullptr);
+    }
+
+    static unsigned uptime() {
+        return (hal_timer_millis(nullptr) / 1000);
     }
 
 private:

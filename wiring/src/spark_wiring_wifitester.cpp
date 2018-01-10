@@ -25,11 +25,11 @@
 #include "spark_wiring_wifi.h"
 #include "spark_wiring_usbserial.h"
 #include "spark_wiring_usartserial.h"
-#include "wifitester.h"
+#include "spark_wiring_wifitester.h"
 #include "core_hal.h"
 #include "spark_wiring_version.h"
 #include "string_convert.h"
-#include "system_cloud_internal.h"
+#include "bytes2hexbuf.h"
 #include "deviceid_hal.h"
 
 #if 0 //MODULAR_FIRMWARE
@@ -93,13 +93,18 @@ const char cmd_ANT[] = "ANT";
 #endif
 const char cmd_SET_PIN[] = "SET_PIN:";
 const char cmd_SET_PRODUCT[] = "SET_PRODUCT:";
+const char cmd_POWER_ON[] = "POWER_ON:";
 
 // This class should be factored out into a network neutral base, and subclasses for WiFi/Cellular
 
 void WiFiTester::setup(bool useSerial1) {
     this->useSerial1 = useSerial1;
-    NETWORK.on();
 
+#if Wiring_WiFi
+    // Only turn on Wi-Fi module by default.  Turning on Cellular without a modem present will create long delays.
+    NETWORK.on();
+    power_state = true;
+#endif
     cmd_index = 0;
     RGB.control(true);
     RGB.color(64, 0, 0);
@@ -155,6 +160,10 @@ extern "C" bool fetch_or_generate_setup_ssid(varstring_t* result) {
 }
 #endif
 
+bool WiFiTester::isPowerOn() {
+    return power_state;
+}
+
 void WiFiTester::printInfo() {
     String deviceID = Particle.deviceID();
 
@@ -166,11 +175,13 @@ void WiFiTester::printInfo() {
     uint8_t* addr = ip_config.nw.uaMacAddr;
     String macAddress;
     bool first = true;
+    char tmp[3] = {0};
     for (int m = 0; m < 6; m++) {
         if (!first)
             macAddress += ":";
         first = false;
-        macAddress += bytes2hex(addr++, 1);
+        bytes2hexbuf(addr, 1, tmp);
+        macAddress += tmp;
     }
 #endif
 
@@ -189,9 +200,14 @@ void WiFiTester::printInfo() {
 
 #if Wiring_Cellular
     printItem("MAC", "00:00:00:00:00:00");   // needed by the sticker rig
-    CellularDevice dev;
-    cellular_device_info(&dev, NULL);
-    //printItem("IMEI", dev.imei);
+
+    // GET ICCID and IMEI (Modem with power on required)
+    if (isPowerOn()) {
+        CellularDevice dev;
+        cellular_device_info(&dev, NULL);
+        printItem("ICCID", dev.iccid);
+        printItem("IMEI", dev.imei);
+    }
 #endif
 
     printItem("SSID", serial.string);
@@ -293,16 +309,14 @@ void WiFiTester::checkWifiSerial(char c) {
         } else if ((start = strstr(command, cmd_DFU))) {
             serialPrintln("DFU mode! DFU mode! DFU mode! DFU mode! DFU mode! DFU mode!");
             serialPrintln("DFU mode! DFU mode! DFU mode! DFU mode! DFU mode! DFU mode!");
-            delay(100);
-            serialPrintln("resetting into DFU mode!");
+            delay(200);
 
             System.dfu();
         } else if ((start = strstr(command, cmd_RESET))) {
             //to trigger a factory reset:
-
             serialPrintln("factory reset! factory reset! factory reset! factory reset!");
             serialPrintln("factory reset! factory reset! factory reset! factory reset!");
-            delay(2000);
+            delay(200);
 
             System.factoryReset();
         } else if ((start = strstr(command, cmd_UNLOCK))) {
@@ -329,14 +343,34 @@ void WiFiTester::checkWifiSerial(char c) {
             serialPrintln("Rebooting... Rebooting... Rebooting...");
             serialPrintln("Rebooting... Rebooting... Rebooting...");
 
-            delay(1000);
+            delay(200);
             System.reset();
+        } else if ((start = strstr(command, cmd_POWER_ON))) {
+            serialPrintln("Power on... Power on... Power on...");
+            serialPrintln("Power on... Power on... Power on...");
+
+#if Wiring_Cellular
+            delay(200);
+            cellular_result_t result = cellular_on(NULL);
+            if (result == 0) {
+                power_state = true;
+            } else {
+                power_state = false;
+            }
+#endif
+            // Respond for all platforms
+            if (isPowerOn()) {
+                serialPrintln("POWER IS ON");
+            } else {
+                serialPrintln("POWER FAILED TO TURN ON!!!");
+            }
+            delay(200);
         } else if ((start = strstr(command, cmd_INFO))) {
             printInfo();
         }
         else if ((start = strstr(command, cmd_CLEAR))) {
 #if Wiring_WiFi
-        		if (WiFi.hasCredentials())
+                if (WiFi.hasCredentials())
                 WiFi.clearCredentials();
 #endif
         }
@@ -507,15 +541,51 @@ void WiFiTester::tester_connect(char *ssid, char *pass) {
     WiFi.connect();
     WiFi.clearCredentials();
     //
-    //	wlan_ioctl_set_connection_policy(DISABLE, DISABLE, DISABLE);
-    //	wlan_connect(WLAN_SEC_WPA2, ssid, strlen(ssid), NULL, pass, strlen(pass));
-    //	WLAN_MANUAL_CONNECT = 0;
+    //  wlan_ioctl_set_connection_policy(DISABLE, DISABLE, DISABLE);
+    //  wlan_connect(WLAN_SEC_WPA2, ssid, strlen(ssid), NULL, pass, strlen(pass));
+    //  WLAN_MANUAL_CONNECT = 0;
     //
-    //	RGBColor = 0xFF00FF;		//purple
-    //USERLED_SetRGBColor(0xFF00FF);		//purple
+    //  RGBColor = 0xFF00FF;        //purple
+    //USERLED_SetRGBColor(0xFF00FF);        //purple
     //USERLED_On(LED_RGB);
     serialPrintln("  WIFI Connected?    ");
 #endif
+}
+
+void WiFiTester::init() {
+#if defined(SETUP_OVER_SERIAL1) && SETUP_OVER_SERIAL1 == 1
+    system_tester_handlers_t handlers = {0};
+    handlers.version = 1;
+    handlers.size = sizeof(handlers);
+    handlers.create = [](void* reserved) -> void* {
+        return new WiFiTester();
+    };
+    handlers.destroy = [](void* tester, void* reserved) -> int {
+        WiFiTester* t = reinterpret_cast<WiFiTester*>(tester);
+        if (t != nullptr) {
+            delete t;
+            return 0;
+        }
+        return 1;
+    };
+    handlers.setup = [](void* tester, bool useSerial1, void* reserved) -> int {
+        WiFiTester* t = reinterpret_cast<WiFiTester*>(tester);
+        if (t != nullptr) {
+            t->setup(useSerial1);
+            return 0;
+        }
+        return 1;
+    };
+    handlers.loop = [](void* tester, int c, void* reserved) -> int {
+        WiFiTester* t = reinterpret_cast<WiFiTester*>(tester);
+        if (t != nullptr) {
+            t->loop(c);
+            return 0;
+        }
+        return 1;
+    };
+    system_set_tester_handlers(&handlers, nullptr);
+#endif // defined(SETUP_OVER_SERIAL1) && SETUP_OVER_SERIAL1 == 1
 }
 
 #endif

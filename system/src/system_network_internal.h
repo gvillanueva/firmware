@@ -29,6 +29,7 @@
 #include "system_network.h"
 #include "system_threading.h"
 #include "system_mode.h"
+#include "system_power.h"
 
 #include "platforms.h"
 #if PLATFORM_ID == PLATFORM_DUO_PRODUCTION

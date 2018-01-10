@@ -48,8 +48,12 @@ CPPSRC += $(call target_files,$(WIRING_SRC),spark_wiring_logging.cpp)
 CPPSRC += $(call target_files,$(WIRING_SRC),spark_wiring_json.cpp)
 CPPSRC += $(call target_files,$(WIRING_SRC),spark_wiring_async.cpp)
 CPPSRC += $(call target_files,$(WIRING_SRC),spark_wiring_fuel.cpp)
+CPPSRC += $(call target_files,$(WIRING_SRC),spark_wiring_power.cpp)
 CPPSRC += $(call target_files,$(WIRING_SRC),spark_wiring_character.cpp)
 CPPSRC += $(call target_files,$(WIRING_SRC),spark_wiring_led.cpp)
+CPPSRC += $(call target_files,$(WIRING_SRC),spark_wiring_diagnostics.cpp)
+CPPSRC += $(call target_files,$(WIRING_SRC),spark_wiring_cellular_printable.cpp)
+CPPSRC += $(call target_files,$(WIRING_SRC),spark_wiring_wifi.cpp)
 CPPSRC += $(call target_files,$(WIRING_SRC),string_convert.cpp)
 CPPSRC += $(call target_files,$(SYSTEM)src/,system_utilities.cpp)
 CPPSRC += $(call target_files,$(SYSTEM)src/,system_mode.cpp)
@@ -57,6 +61,9 @@ CPPSRC += $(call target_files,$(SYSTEM)src/,system_string_interpolate.cpp)
 CPPSRC += $(call target_files,$(SYSTEM)src/,system_led_signal.cpp)
 CPPSRC += $(call target_files,$(HAL)src/gcc,timer_hal.cpp)
 CPPSRC += $(call target_files,$(HAL)src/gcc,rgbled_hal.cpp)
+CPPSRC += $(call target_files,$(HAL)src/gcc,wlan_hal.cpp)
+CPPSRC += $(call target_files,$(HAL)src/gcc,net_hal.cpp)
+CPPSRC += $(call target_files,$(HAL)src/gcc,delay_hal.cpp)
 CPPSRC += $(call target_files,$(HAL)src/electron,cellular_internal.cpp)
 
 # Paths to dependent projects, referenced from root of this project
@@ -71,6 +78,7 @@ CPPSRC += $(call target_files,$(LIB_SERVICES)src,logging.cpp)
 CPPSRC += $(call target_files,$(LIB_SERVICES)src,system_error.cpp)
 CPPSRC += $(call target_files,$(LIB_SERVICES)src,led_service.cpp)
 CPPSRC += $(call target_files,$(LIB_SERVICES)src,completion_handler.cpp)
+CPPSRC += $(call target_files,$(LIB_SERVICES)src,diagnostics.cpp)
 
 
 # Additional include directories, applied to objects built for this target.
@@ -83,6 +91,7 @@ INCLUDE_DIRS += $(SYSTEM)inc
 INCLUDE_DIRS += $(HAL)shared
 INCLUDE_DIRS += $(HAL)inc
 INCLUDE_DIRS += $(HAL)src/electron
+INCLUDE_DIRS += $(HAL)src/gcc
 INCLUDE_DIRS += $(COMMUNICATION)src
 INCLUDE_DIRS += dynalib/inc
 INCLUDE_DIRS += $(PLATFORM)shared/inc
@@ -92,6 +101,7 @@ INCLUDE_DIRS += $(PLATFORM)MCU/STM32F2xx/SPARK_Firmware_Driver/inc
 # prefix $(SRC_ROOT)
 ABS_INCLUDE_DIRS += $(patsubst %,$(SRC_ROOT)/%,$(INCLUDE_DIRS))
 
+DEFINES += SPARK_NO_PLATFORM
 
 ifeq ("$(BOOST_ROOT)","")
 $(error BOOST_ROOT not defined)
@@ -99,10 +109,10 @@ else
 $(info BOOST_ROOT "$(BOOST_ROOT)")
 endif
 
-DEFINES += BOOST_NO_AUTO_PTR USE_STDPERIPH_DRIVER
+DEFINES += UNIT_TEST BOOST_NO_AUTO_PTR USE_STDPERIPH_DRIVER
 ABS_INCLUDE_DIRS += $(BOOST_ROOT)
 LIB_DIRS += $(BOOST_ROOT)/stage/lib
-LIBS += boost_regex
+LIBS += boost_regex boost_system boost_thread
 export DYLD_LIBRARY_PATH=$(BOOST_ROOT)/stage/lib
 
 CFLAGS += $(patsubst %,-I%,$(ABS_INCLUDE_DIRS)) -I.

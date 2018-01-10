@@ -1332,6 +1332,14 @@
 //#define MBEDTLS_X509_RSASSA_PSS_SUPPORT
 
 /**
+ * \def MBEDTLS_X509_INFO_SUPPORT
+ *
+ * Enable mbedtls_x509_crt_info and mbedtls_x509_crt_verify_info functions
+ *
+ */
+// #define MBEDTLS_X509_INFO_SUPPORT
+
+/**
  * \def MBEDTLS_SSL_RAW_PUBLIC_KEY_SUPPORT
  *
  * Enable parsing and verification of raw public keys,
@@ -2496,7 +2504,7 @@
 //#define MBEDTLS_SSL_DEFAULT_TICKET_LIFETIME     86400 /**< Lifetime of session tickets (if enabled) */
 //#define MBEDTLS_PSK_MAX_LEN               32 /**< Max size of TLS pre-shared keys, in bytes (default 256 bits) */
 //#define MBEDTLS_SSL_COOKIE_TIMEOUT        60 /**< Default expiration delay of DTLS cookies, in seconds if HAVE_TIME, or in number of cookies issued */
-#define MBEDTLS_SSL_MAX_CONTENT_LEN             768
+#define MBEDTLS_SSL_MAX_CONTENT_LEN             800
 
 /**
  * Complete list of ciphersuites to use, in order of preference.
