@@ -84,12 +84,18 @@ String spark_deviceID(void);
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+enum cloud_disconnect_reason {
+    CLOUD_DISCONNECT_REASON_OTHER = 0,
+    CLOUD_DISCONNECT_REASON_ERROR = 1
+};
+
 #if PLATFORM_ID!=3
 String spark_deviceID(void);
 #endif
 
-void cloud_disconnect(bool closeSocket=true, bool graceful=false);
-void cloud_disconnect_graceful(bool closeSocket=true);
+void cloud_disconnect(bool closeSocket=true, bool graceful=false, int reason = CLOUD_DISCONNECT_REASON_OTHER);
+void cloud_disconnect_graceful(bool closeSocket=true, int reason = CLOUD_DISCONNECT_REASON_OTHER);
 
 class String;
 
@@ -190,6 +196,8 @@ bool spark_cloud_flag_auto_connect(void);
 ProtocolFacade* system_cloud_protocol_instance(void);
 
 int spark_set_connection_property(unsigned property_id, unsigned data, void* datap, void* reserved);
+
+int spark_set_random_seed_from_cloud_handler(void (*handler)(unsigned int), void* reserved);
 
 extern const unsigned char backup_udp_public_server_key[91];
 extern const unsigned char backup_udp_public_server_address[22];

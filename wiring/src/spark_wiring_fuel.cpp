@@ -25,10 +25,22 @@
  */
 
 #include "spark_wiring_fuel.h"
+#include <mutex>
+#include "spark_wiring_power.h"
 
-FuelGauge::FuelGauge()
+FuelGauge::FuelGauge(bool _lock) :
+    lock_(_lock)
 {
+    if (lock_) {
+        lock();
+    }
+}
 
+FuelGauge::~FuelGauge()
+{
+    if (lock_) {
+        unlock();
+    }
 }
 
 boolean FuelGauge::begin()
@@ -72,6 +84,31 @@ float FuelGauge::getSoC() {
 
 	readRegister(SOC_REGISTER, MSB, LSB);
 	return detail::_getSoC(MSB, LSB);
+}
+
+float FuelGauge::getNormalizedSoC() {
+    std::lock_guard<FuelGauge> l(*this);
+    PMIC power(true);
+
+    const float soc = getSoC() / 100.0f;
+    const float termV = ((float)power.getChargeVoltageValue()) / 1000.0f;
+    const float magicVoltageDiff = 0.1f;
+    const float reference100PercentV = 4.2f;
+    const float referenceMaxV = std::max(reference100PercentV, termV) - magicVoltageDiff;
+
+    const float magicError = 0.05f;
+    const float maxCharge = (1.0f - (reference100PercentV - referenceMaxV)) - magicError;
+    const float minCharge = 0.0f; // 0%
+
+    float normalized = (soc - minCharge) * (1.0f / (maxCharge - minCharge)) + 0.0f;
+    // Clamp at [0.0, 1.0]
+    if (normalized < 0.0f) {
+        normalized = 0.0f;
+    } else if (normalized > 1.0f) {
+        normalized = 1.0f;
+    }
+
+    return normalized * 100.0f;
 }
 
 // Return the version number of the chip
@@ -146,7 +183,7 @@ void FuelGauge::quickStart() {
 }
 
 void FuelGauge::sleep() {
-
+    std::lock_guard<FuelGauge> l(*this);
 	byte MSB = 0;
 	byte LSB = 0;
 
@@ -157,7 +194,7 @@ void FuelGauge::sleep() {
 }
 
 void FuelGauge::wakeup() {
-
+    std::lock_guard<FuelGauge> l(*this);
 	byte MSB = 0;
 	byte LSB = 0;
 
@@ -175,6 +212,7 @@ void FuelGauge::readConfigRegister(byte &MSB, byte &LSB) {
 
 
 void FuelGauge::readRegister(byte startAddress, byte &MSB, byte &LSB) {
+    std::lock_guard<FuelGauge> l(*this);
 #if Wiring_Wire3
 	Wire3.beginTransmission(MAX17043_ADDRESS);
     Wire3.write(startAddress);
@@ -187,6 +225,7 @@ void FuelGauge::readRegister(byte startAddress, byte &MSB, byte &LSB) {
 }
 
 void FuelGauge::writeRegister(byte address, byte MSB, byte LSB) {
+    std::lock_guard<FuelGauge> l(*this);
 #if Wiring_Wire3
 	Wire3.beginTransmission(MAX17043_ADDRESS);
     Wire3.write(address);
@@ -194,4 +233,18 @@ void FuelGauge::writeRegister(byte address, byte MSB, byte LSB) {
     Wire3.write(LSB);
     Wire3.endTransmission(true);
 #endif
+}
+
+bool FuelGauge::lock() {
+#if Wiring_Wire3
+    return Wire3.lock();
+#endif
+    return false;
+}
+
+bool FuelGauge::unlock() {
+#if Wiring_Wire3
+    return Wire3.unlock();
+#endif
+    return false;
 }

@@ -248,7 +248,7 @@ $(TARGET_BASE).elf : build_dependencies $(ALLOBJ) $(LIB_DEPS) $(LINKER_DEPS)
 	$(call echo,'Building target: $@')
 	$(call echo,'Invoking: ARM GCC C++ Linker')
 	$(VERBOSE)$(MKDIR) $(dir $@)
-	$(VERBOSE)$(CPP) $(CFLAGS) $(ALLOBJ) --output $@ $(LDFLAGS)
+	$(VERBOSE)$(CCACHE) $(CPP) $(CFLAGS) $(ALLOBJ) --output $@ $(LDFLAGS)
 	$(call extract_link_flags,$(notdir $@),$(CFLAGS),$(LDFLAGS))
 	$(call echo,)
 
@@ -256,7 +256,7 @@ $(TARGET_BASE)$(EXECUTABLE_EXTENSION) : build_dependencies $(ALLOBJ) $(LIB_DEPS)
 	$(call echo,'Building target: $@')
 	$(call echo,'Invoking: GCC C++ Linker')
 	$(VERBOSE)$(MKDIR) $(dir $@)
-	$(VERBOSE)$(CPP) $(CFLAGS) $(ALLOBJ) --output $@ $(LDFLAGS)
+	$(VERBOSE)$(CCACHE) $(CPP) $(CFLAGS) $(ALLOBJ) --output $@ $(LDFLAGS)
 	$(call echo,)
 
 
@@ -265,14 +265,14 @@ $(TARGET_BASE).a : $(ALLOBJ)
 	$(call echo,'Building target: $@')
 	$(call echo,'Invoking: ARM GCC Archiver')
 	$(VERBOSE)$(MKDIR) $(dir $@)
-	$(VERBOSE)$(AR) -cr $@ $^
+	$(VERBOSE)$(CCACHE) $(AR) -cr $@ $^
 	$(call echo,)
 
 define build_C_file
 	$(call echo,'Building c file: $<')
 	$(call echo,'Invoking: ARM GCC C Compiler')
 	$(VERBOSE)$(MKDIR) $(dir $@)
-	$(VERBOSE)$(CC) $(CFLAGS) $(CONLYFLAGS) -c -o $@ $<
+	$(VERBOSE)$(CCACHE) $(CC) $(CFLAGS) $(CONLYFLAGS) -c -o $@ $<
 	$(call echo,)
 endef
 
@@ -280,7 +280,7 @@ define build_CPP_file
 	$(call echo,'Building cpp file: $<')
 	$(call echo,'Invoking: ARM GCC CPP Compiler')
 	$(VERBOSE)$(MKDIR) $(dir $@)
-	$(VERBOSE)$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $<
+	$(VERBOSE)$(CCACHE) $(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $<
 	$(call echo,)
 endef
 
@@ -311,7 +311,7 @@ $(BUILD_PATH)/%.o : $(COMMON_BUILD)/arm/%.S
 	$(call echo,'Building file: $<')
 	$(call echo,'Invoking: ARM GCC Assembler')
 	$(VERBOSE)$(MKDIR) $(dir $@)
-	$(VERBOSE)$(CC) $(ASFLAGS) -c -o $@ $<
+	$(VERBOSE)$(CCACHE) $(CC) $(ASFLAGS) -c -o $@ $<
 	$(call echo,)
 
 
