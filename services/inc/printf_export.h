@@ -2,6 +2,7 @@
 
 #if PLATFORM_ID != 3
 
+#include <stdarg.h>
 #include <stdio.h>
 
 // Taken from nano-vfprintf_local.h
@@ -52,6 +53,13 @@ _printf_float (struct _reent *data,
            int (*pfunc)(struct _reent *, FILE *,
                 _CONST char *, size_t len),
            va_list *ap);
+
+int
+_printf_i (struct _reent *data, struct _prt_data_t *pdata, FILE *fp,
+     int (*pfunc)(struct _reent *, FILE *, _CONST char *, size_t len),
+     va_list *ap);
+
+int _svfprintf_r(struct _reent *, FILE *, const char *, va_list) _ATTRIBUTE ((__format__ (__printf__, 3, 0)));
 
 #ifdef __cplusplus
 }
