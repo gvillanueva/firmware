@@ -58,16 +58,12 @@ int HAL_FLASH_Update(const uint8_t *pBuffer, uint32_t address, uint32_t length, 
     return 0;
 }
 
-<<<<<<< HEAD
-hal_update_complete_t HAL_FLASH_End(uint32_t file_address, uint32_t file_length, hal_module_t* mod)
-=======
 int HAL_FLASH_OTA_Validate(hal_module_t* mod, bool userDepsOptional, module_validation_flags_t flags, void* reserved)
 {
   return 0;
 }
 
-hal_update_complete_t HAL_FLASH_End(hal_module_t* mod)
->>>>>>> 82e4e318cb448ad13130d88104eed8d9fe75faea
+hal_update_complete_t HAL_FLASH_End(uint32_t file_address, uint32_t file_length, hal_module_t* mod)
 {
     return HAL_UPDATE_ERROR;
 }

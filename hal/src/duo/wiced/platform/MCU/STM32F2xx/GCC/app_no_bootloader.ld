@@ -163,9 +163,12 @@ SECTIONS
         . = ALIGN(MAX(link_stack_location + __STACKSIZE__ , .), 4);
         link_stack_end = .;
     }> SRAM AT> SRAM
-	
+
     INCLUDE backup_ram_user.ld
     INCLUDE backup_ram_system.ld
+
+    link_heap_location = _heap;
+    link_heap_location_end = _eheap;
 
     /DISCARD/ :
     {
