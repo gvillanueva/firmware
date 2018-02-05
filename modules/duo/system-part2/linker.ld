@@ -6,14 +6,14 @@ MEMORY
 {
     DCT1_FLASH                 (rx)  : ORIGIN = 0x08008000,     LENGTH = 16K
     DCT2_FLASH                 (rx)  : ORIGIN = 0x0800C000,     LENGTH = 16K
-    APP_FLASH                  (rx)  : ORIGIN = 0x08040000,     LENGTH = 512K
+    APP_FLASH                  (rx)  : ORIGIN = 0x08060000,     LENGTH = 512K
 
     /* The SRAM area is offset to include the stack and static ram allocated at the end of the SRAM area.
        This is done so that the build outputs meaningful values for BSS and Data section sizes.
 
        The value given here is the sum of system_static_ram_size and stack_size
     */
-    SRAM      (rwx) : ORIGIN = 0x20020000 - 54K, LENGTH = 54K
+    SRAM      (rwx) : ORIGIN = 0x20020000 - 58K, LENGTH = 58K
     
     INCLUDE backup_ram_memory.ld
 }

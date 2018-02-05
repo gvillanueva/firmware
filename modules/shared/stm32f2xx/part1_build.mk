@@ -51,6 +51,10 @@ ifeq ($(PLATFORM_ID),8)
 USE_PRINTF_FLOAT ?= y
 endif
 
+ifeq ($(PLATFORM_ID),88)
+USE_PRINTF_FLOAT ?= y
+endif
+
 # Export _printf_float from system-part1 on Photon and P1
 ifeq ("$(USE_PRINTF_FLOAT)","y")
 LDFLAGS += -u _printf_float
