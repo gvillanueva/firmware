@@ -418,7 +418,7 @@ int Spark_Finish_Firmware_Update(FileTransfer::Descriptor& file, uint32_t flags,
     hal_module_t mod;
 
     if ((flags & (UpdateFlag::VALIDATE_ONLY | UpdateFlag::SUCCESS)) == (UpdateFlag::VALIDATE_ONLY | UpdateFlag::SUCCESS)) {
-        res = HAL_FLASH_OTA_Validate(module ? (hal_module_t*)module : &mod, true, (module_validation_flags_t)(MODULE_VALIDATION_INTEGRITY | MODULE_VALIDATION_DEPENDENCIES_FULL), NULL);
+        res = HAL_FLASH_OTA_Validate(file.file_address, file.file_length, module ? (hal_module_t*)module : &mod, true, (module_validation_flags_t)(MODULE_VALIDATION_INTEGRITY | MODULE_VALIDATION_DEPENDENCIES_FULL), NULL);
         return res;
     }
 
