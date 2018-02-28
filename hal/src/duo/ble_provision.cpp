@@ -8,7 +8,6 @@
 #include "rgbled.h"
 #include "dct.h"
 #include "deviceid_hal.h"
-#include "flash_access.h"
 #include "spark_macros.h"
 #include "gpio_hal.h"
 #include "core_hal.h"

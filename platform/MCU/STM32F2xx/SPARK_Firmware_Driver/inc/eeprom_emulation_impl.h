@@ -38,7 +38,7 @@ constexpr uintptr_t EEPROM_SectorBase2 = 0x08010000;
 
 constexpr size_t EEPROM_SectorSize1 = 16*1024;
 constexpr size_t EEPROM_SectorSize2 = 64*1024;
-#endif
 
 using FlashEEPROM = EEPROMEmulation<InternalFlashStore, EEPROM_SectorBase1, EEPROM_SectorSize1, EEPROM_SectorBase2, EEPROM_SectorSize2>;
+#endif
 

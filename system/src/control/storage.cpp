@@ -47,8 +47,10 @@
 #endif
 
 // TODO: Add support for external flash (available if HAS_SERIAL_FLASH macro is defined)
+#if PLATFORM_ID != PLATFORM_DUO_PRODUCTION
 #ifdef USE_SERIAL_FLASH
 #error "External flash is not supported"
+#endif
 #endif
 
 namespace particle {

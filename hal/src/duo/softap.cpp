@@ -16,7 +16,6 @@
 #include "core_hal.h"
 #include "rng_hal.h"
 #include "ota_flash_hal_stm32f2xx.h"
-#include "flash_access.h"
 #include "bytes2hexbuf.h"
 #include "spark_wiring_wifi_credentials.h"
 #include "mbedtls/aes.h"
@@ -1670,7 +1669,10 @@ public:
         // todo - keep reading until a \n\n is encountered.
         bool seenNewline = true;
         for (;;) {
-            char c=readChar(reader);
+            char c = 0;
+            result = readChar(reader, &c);
+            if (result < 0)
+                break;
             if (c=='\n') {
                 if (seenNewline)
                     break;
