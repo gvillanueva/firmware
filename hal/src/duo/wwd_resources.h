@@ -1,6 +1,6 @@
 /**
  ******************************************************************************
- * @file    wifi_dynalib.h
+ * @file    wiced_stubs.h
  * @authors Matthew McGowan
  * @date    10 February 2015
  ******************************************************************************
@@ -21,19 +21,30 @@
  ******************************************************************************
  */
 
-#ifndef WIFI_DYNALIB_H
-#define	WIFI_DYNALIB_H
+#ifndef WICED_STUBS_H
+#define	WICED_STUBS_H
 
-#include "dynalib.h"
+#include <stdint.h>
 
-DYNALIB_BEGIN(wifi_resource)
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-DYNALIB_FN(0, wifi_resource, wwd_firmware_image_resource, const resource_hnd_t*(void))
-DYNALIB_FN(1, wifi_resource, wwd_nvram_image_resource, const resource_hnd_t*(void))
-DYNALIB_FN(2, wifi_resource, wwd_select_nvram_image_resource, int(uint8_t, void*))
-DYNALIB_FN(3, wifi_resource, resource_read, resource_result_t(const resource_hnd_t*, uint32_t, uint32_t, uint32_t*, void*))
-DYNALIB_END(wifi_resource)
+#ifndef INCLUDED_RESOURCE_H_
+// resource_hnd_t not defined so let's typedef it (it's only used as a pointer here.)
+typedef struct
+{
+} resource_hnd_t;
+#endif
 
+const resource_hnd_t* wwd_firmware_image_resource(void);
 
-#endif	/* WIFI_DYNALIB_H */
+const resource_hnd_t* wwd_nvram_image_resource(void);
 
+int wwd_select_nvram_image_resource(uint8_t res, void* reserved);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif	/* WICED_STUBS_H */
