@@ -1,7 +1,7 @@
 /* Memory layout constants */
 
-user_module_app_flash_origin = 0x080E0000;
-user_module_app_flash_length = 128K;
+user_module_app_flash_origin = 0x080C0000;
+user_module_app_flash_length = 256K;
 
 /* The SRAM Origin is system_part1_module_ram_end, and extends to system_static_ram_start */
 user_module_sram_origin = 0x20000300;

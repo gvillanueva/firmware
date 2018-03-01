@@ -3,7 +3,7 @@ SYSTEM_PART2_MODULE_PATH=.
 PROJECT_ROOT = ../../..
 BUILD_PATH_EXT = $(BUILD_TARGET_PLATFORM)
 HAL_LINK :=
-PLATFORM_DFU = 0x8060000
+PLATFORM_DFU = 0x8040000
 
 DEPENDENCIES = newlib_nano modules/duo/user-part modules/duo/system-part1 dynalib services services-dynalib hal platform system wiring communication-dynalib communication rt-dynalib crypto-dynalib crypto
 LIB_DEPENDENCIES = services-dynalib system wiring communication-dynalib hal platform crypto-dynalib crypto
