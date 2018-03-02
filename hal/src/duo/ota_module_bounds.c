@@ -4,9 +4,9 @@
 const module_bounds_t module_bootloader = { 0x8000, 0x8000000, 0x8008000, MODULE_FUNCTION_BOOTLOADER, 0, MODULE_STORE_MAIN };
 
 // Modular firmware
-const module_bounds_t module_system_part1 = { 0x40000, 0x8020000, 0x8040000, MODULE_FUNCTION_SYSTEM_PART, 1, MODULE_STORE_MAIN };
-const module_bounds_t module_system_part2 = { 0x80000, 0x8060000, 0x80E0000, MODULE_FUNCTION_SYSTEM_PART, 2, MODULE_STORE_MAIN};
-const module_bounds_t module_user = { 0x20000, 0x80E0000, 0x8100000, MODULE_FUNCTION_USER_PART, 1, MODULE_STORE_MAIN};
+const module_bounds_t module_system_part1 = { 0x20000, 0x8020000, 0x8040000, MODULE_FUNCTION_SYSTEM_PART, 1, MODULE_STORE_MAIN };
+const module_bounds_t module_system_part2 = { 0x80000, 0x8040000, 0x80C0000, MODULE_FUNCTION_SYSTEM_PART, 2, MODULE_STORE_MAIN};
+const module_bounds_t module_user = { 0x40000, 0x80C0000, 0x8100000, MODULE_FUNCTION_USER_PART, 1, MODULE_STORE_MAIN};
 const module_bounds_t module_factory = { 0x20000, 0x140000, 0x160000, MODULE_FUNCTION_USER_PART, 1, MODULE_STORE_FACTORY};
 const module_bounds_t module_ota = { 0x80000, 0xC0000, 0x140000, MODULE_FUNCTION_NONE, 0, MODULE_STORE_SCRATCHPAD};
 
