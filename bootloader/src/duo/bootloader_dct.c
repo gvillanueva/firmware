@@ -4,7 +4,7 @@
 
 #include <string.h>
 
-#define MIN_MODULE_VERSION_SYSTEM_PART2 SYSTEM_MODULE_VERSION_0_7_0_RC1
+#define MIN_MODULE_VERSION_SYSTEM_PART2 SYSTEM_MODULE_VERSION_0_3_2
 
 #define DYNALIB_INDEX_SYSTEM_MODULE_PART1 2 // system_module_part1
 #define FUNC_INDEX_MODULE_SYSTEM_PART1_PRE_INIT 0 // module_system_part1_pre_init()
@@ -78,6 +78,14 @@ const void* dct_read_app_data(uint32_t offset) {
         init_dct_functions();
         dct_funcs_inited = 1;
     }
+    
+#if PLATFORM_ID == 88
+    if (!dct_read_app_data_func)
+    {
+        init_dct_functions();
+    }
+#endif
+
     if (dct_read_app_data_func) {
         return dct_read_app_data_func(offset);
     }
@@ -89,6 +97,14 @@ int dct_write_app_data(const void* data, uint32_t offset, uint32_t size) {
         init_dct_functions();
         dct_funcs_inited = 1;
     }
+    
+#if PLATFORM_ID == 88
+    if (!dct_write_app_data_func)
+    {
+        init_dct_functions();
+    }
+#endif
+
     if (dct_write_app_data_func) {
         return dct_write_app_data_func(data, offset, size);
     }
