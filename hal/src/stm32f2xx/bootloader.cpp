@@ -40,7 +40,7 @@ bool bootloader_requires_update(const uint8_t* bootloader_image, uint32_t length
     uint16_t current_version = *(uint16_t*)(0x8000000+VERSION_OFFSET);
     uint16_t available_version = *(uint16_t*)(bootloader_image+VERSION_OFFSET);
 
-    bool requires_update = current_version<available_version;
+    bool requires_update = current_version!=available_version;
     return requires_update;
 }
 
