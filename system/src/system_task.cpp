@@ -107,29 +107,34 @@ void manage_serial_flasher()
         system_firmwareUpdate(&Serial);
     }
 #if (PLATFORM_ID==88) && defined (START_AVRDUDE_FLASHER_SERIAL_SPEED)
-    else if(SPARK_FLASH_UPDATE == 4 || EXTRA_SYSTEM_FLAG(arduino_upload) == 0xAABB)
+    else if(EXTRA_SYSTEM_FLAG(arduino_upload) == 0xAABB)
     {
-        if(EXTRA_SYSTEM_FLAG(arduino_upload) == 0xAABB)
+        EXTRA_SYSTEM_FLAG(arduino_upload) = 0;
+        Save_ExtraSystemFlags();
+
+        SPARK_FLASH_UPDATE = 6;
+
+        LED_SetRGBColor(RGB_COLOR_MAGENTA);
+        LED_On(LED_RGB);
+        system_tick_t start_millis = HAL_Timer_Get_Milli_Seconds();
+        while(SPARK_FLASH_UPDATE != 4)
         {
-            EXTRA_SYSTEM_FLAG(arduino_upload) = 0;
-            Save_ExtraSystemFlags();
-        }
-        if(SPARK_FLASH_UPDATE != 4) // Reset by arduino avrdude 1200bps touch, must followed by uploading progress.
-        {
-            LED_SetRGBColor(RGB_COLOR_MAGENTA);
-            LED_On(LED_RGB);
-            system_tick_t start_millis = HAL_Timer_Get_Milli_Seconds();
-            while(SPARK_FLASH_UPDATE != 4)
+            if( (HAL_Timer_Get_Milli_Seconds() - start_millis) > 10000 ) // Wait for 10 seconds to reset if arduino do not begin the uploading progress.
             {
-                if( (HAL_Timer_Get_Milli_Seconds() - start_millis) > 10000 ) // Wait for 10 seconds to reset if arduino do not begin the uploading progress.
-                {
-                    USB_Cable_Config(DISABLE);
-                    NVIC_SystemReset();
-                }
+                USB_Cable_Config(DISABLE);
+                NVIC_SystemReset();
             }
         }
 
         system_avrdudeFirmwareUpdate(&Serial);
+    }
+    else if(SPARK_FLASH_UPDATE == 5)
+    {
+        EXTRA_SYSTEM_FLAG(arduino_upload) = 0xAABB;
+        Save_ExtraSystemFlags();
+
+        HAL_USB_Detach();
+        NVIC_SystemReset();
     }
 #endif
 }
@@ -385,11 +390,11 @@ void establish_cloud_connection()
 
 int cloud_handshake()
 {
-	bool udp = HAL_Feature_Get(FEATURE_CLOUD_UDP);
+    bool udp = HAL_Feature_Get(FEATURE_CLOUD_UDP);
     feature_cloud_udp = (uint8_t)udp;
-	bool presence_announce = !udp;
-	int err = Spark_Handshake(presence_announce);
-	return err;
+    bool presence_announce = !udp;
+    int err = Spark_Handshake(presence_announce);
+    return err;
 }
 
 /**
@@ -556,7 +561,7 @@ void system_delay_pump(unsigned long ms, bool force_no_background_loop=false)
         }
         else if ((elapsed_millis >= spark_loop_elapsed_millis) || (spark_loop_total_millis >= SPARK_LOOP_DELAY_MILLIS))
         {
-        		bool threading = system_thread_get_state(nullptr);
+                bool threading = system_thread_get_state(nullptr);
             spark_loop_elapsed_millis = elapsed_millis + SPARK_LOOP_DELAY_MILLIS;
             //spark_loop_total_millis is reset to 0 in Spark_Idle()
             do
@@ -575,12 +580,12 @@ void system_delay_pump(unsigned long ms, bool force_no_background_loop=false)
  */
 void system_delay_ms(unsigned long ms, bool force_no_background_loop=false)
 {
-	// if not threading, or we are the application thread, then implement delay
-	// as a background message pump
+    // if not threading, or we are the application thread, then implement delay
+    // as a background message pump
 
     if ((!PLATFORM_THREADING || APPLICATION_THREAD_CURRENT()) && !HAL_IsISR())
     {
-    		system_delay_pump(ms, force_no_background_loop);
+            system_delay_pump(ms, force_no_background_loop);
     }
     else
     {
