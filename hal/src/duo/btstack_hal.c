@@ -54,7 +54,7 @@ typedef struct{
 }hal_notifyDataQueue_t;
 
 static hal_notifyDataQueue_t notify_queue={.head=0,.tail=0};
-static bool pending_notify_complete;
+static bool pending_indicate_complete;
 
 /**@prepared write. */
 static uint8_t prepared_request[MAX_PREPARED_WRITE_SIZE];
@@ -328,7 +328,7 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
             break;
 
         case ATT_EVENT_HANDLE_VALUE_INDICATION_COMPLETE:
-            pending_notify_complete = false;
+            pending_indicate_complete = false;
             break;
 
         default:
@@ -549,7 +549,7 @@ void hal_btstack_init(void)
 
         client_notification_init();
         memset(&notify_queue, 0x00, sizeof(hal_notifyDataQueue_t));
-        pending_notify_complete = false;
+        pending_indicate_complete = false;
 
         // turn on!
         btstack_state = 0;
@@ -587,7 +587,7 @@ void hal_btstack_loop_execute(void)
 {
     if(hci_init_flag)
     {
-        if (!pending_notify_complete && notify_queneUsedSize() && att_server_can_send_packet_now(connect_handle))
+        if (!pending_indicate_complete && notify_queneUsedSize() && att_server_can_send_packet_now(connect_handle))
         {
             hal_notifyData_t data;
             int ret;
@@ -822,7 +822,7 @@ static void disconnect_task(struct btstack_timer_source *ts)
         gap_disconnect(disconnect_handle);
     disconnect_handle = 0xFFFF;
     memset(&notify_queue, 0x00, sizeof(hal_notifyDataQueue_t));
-    pending_notify_complete = false;
+    pending_indicate_complete = false;
 }
 
 void hal_btstack_disconnect(uint16_t handle)
