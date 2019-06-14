@@ -2,6 +2,7 @@
 #ifndef __SPARK_WIRING_BTSTACK_H_
 #define __SPARK_WIRING_BTSTACK_H_
 
+#define PLATFORM_ID 88
 #if PLATFORM_ID == 88 // Duo
 
 #include "spark_wiring.h"
@@ -939,8 +940,16 @@ public:
 
 };
 
+class BluetoothHidDevice {
+
+public:
+    BluetoothHidDevice() {
+
+    }
+};
 
 extern BLEDevice ble;
+extern BluetoothHidDevice bt_hid;
 
 #endif
 

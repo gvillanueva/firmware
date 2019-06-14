@@ -1,4 +1,5 @@
 
+#define PLATFORM_ID 88
 #if PLATFORM_ID == 88 // Duo
 
 #include "spark_wiring_btstack.h"
@@ -497,5 +498,6 @@ uint8_t BLEDevice::writeClientCharsConfigDescriptor(uint16_t con_handle, gatt_cl
 }
 
 BLEDevice ble;
+BluetoothHidDevice bt_hid;
 
 #endif
