@@ -28,7 +28,7 @@ void setup()
     ble.onConnectedCallback(deviceConnectedCallback);
     ble.onDisconnectedCallback(deviceDisconnectedCallback);
 
-    bt_hid.onHidReportReceived(hidReportReceived);
+//    bt_hid.onHidReportReceived(hidReportReceived);
 }
 
 void loop()

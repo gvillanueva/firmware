@@ -261,6 +261,24 @@ static int att_write_callback(uint16_t con_handle, uint16_t att_handle, uint16_t
     return 0;
 }
 
+void hci_event_packet_handler(uint8_t packet_type, uint16_t channel, uint8_t *packet, uint16_t size);
+void l2cap_data_packet_handler(uint8_t packet_type, uint16_t channel, uint8_t *packet, uint16_t size);
+
+static void packet_handler(uint8_t packet_type, uint16_t channel, uint8_t *packet, uint16_t size)
+{
+    switch (packet_type)
+    {
+    case HCI_EVENT_PACKET:
+        hci_event_packet_handler(packet_type, channel, packet, size);
+        break;
+    case L2CAP_DATA_PACKET:
+        l2cap_data_packet_handler(packet_type, channel, packet, size);
+        break;
+    default:
+        break;
+    }
+}
+
 /**@brief Packet handle.
  *
  * @param packet_type
@@ -268,7 +286,7 @@ static int att_write_callback(uint16_t con_handle, uint16_t att_handle, uint16_t
  * @param *packet
  * @param size
  */
-static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *packet, uint16_t size){
+static void hci_event_packet_handler(uint8_t packet_type, uint16_t channel, uint8_t *packet, uint16_t size){
 
     if (packet_type != HCI_EVENT_PACKET)
         return;
@@ -335,6 +353,18 @@ static void packet_handler (uint8_t packet_type, uint16_t channel, uint8_t *pack
             break;
      }
 }
+
+static void l2cap_data_packet_handler(uint8_t packet_type, uint16_t channel, uint8_t *packet, uint16_t size)
+{
+    if (channel == l2cap_hid_interrupt_cid)
+        hid_host_handle_interrupt_report(packet,  size);
+    else if (channel == l2cap_hid_control_cid)
+    {
+        printf("HID Control: ");
+        printf_hexdump(packet, size);
+    }
+    else
+        break;
 
 static void handle_gatt_client_event(uint8_t packet_type, uint16_t channel, uint8_t *packet, uint16_t size)
 {
